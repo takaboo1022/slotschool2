@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="description" content="ジャグラー4機種対応のスロット期待値計算機・知識ベース。設定推測・機械割・期待値をBayes統計で算出。">
+<meta name="theme-color" content="#fef9f3">
+<title>スロット相棒 — ジャグラー期待値計算機</title>
+<style>
+  /* ===== Reset & Base ===== */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic Medium", Meiryo, sans-serif;
+    background: #fef9f3;
+    color: #1f1d1a;
+    line-height: 1.5;
+    min-height: 100vh;
+    padding: 1rem;
+    -webkit-font-smoothing: antialiased;
+  }
+  
+  /* ===== Color Tokens ===== */
+  :root {
+    --c-bg-primary: #fdfaf5;
+    --c-bg-secondary: #f3eee5;
+    --c-bg-tertiary: #ebe4d6;
+    --c-text-primary: #1f1d1a;
+    --c-text-secondary: #6b6557;
+    --c-text-tertiary: #9b9485;
+    --c-border-tertiary: #d8d2c4;
+    --c-border-secondary: #b8b1a0;
+    --c-text-info: #8b3a3a;
+    --c-bg-info: #fde8e0;
+    --c-border-info: #d97757;
+    --c-text-success: #2d5234;
+    --c-bg-success: #d8e6d2;
+    --c-text-warning: #806020;
+    --c-bg-warning: #f8ecc4;
+    --c-text-danger: #843838;
+    --c-bg-danger: #f8d8d4;
+    --r-md: 8px;
+    --r-lg: 12px;
+  }
+  
+  /* ===== App Container ===== */
+  .app-frame {
+    max-width: 420px;
+    margin: 0 auto;
+    background: var(--c-bg-primary);
+    border-radius: var(--r-lg);
+    border: 0.5px solid var(--c-border-tertiary);
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 4px 20px rgba(40, 25, 10, 0.06);
+  }
+  
+  /* ===== Tabs ===== */
+  .app-tab {
+    flex: 1;
+    padding: 14px 12px;
+    font-size: 14px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-family: inherit;
+    border-bottom: 2px solid transparent;
+    color: var(--c-text-secondary);
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .app-tab.active {
+    color: var(--c-text-info);
+    border-bottom-color: var(--c-text-info);
+    font-weight: 500;
+  }
+  
+  /* ===== Calculator UI ===== */
+  .bar-wrapper {
+    flex: 1;
+    height: 8px;
+    background: var(--c-bg-primary);
+    border-radius: 4px;
+    overflow: hidden;
+    border: 0.5px solid var(--c-border-tertiary);
+  }
+  .bar-fill { height: 100%; transition: width 0.3s ease; }
+  .rate-display { font-size: 11px; color: var(--c-text-tertiary); margin: 4px 0 0; font-variant-numeric: tabular-nums; }
+  .mode-btn { flex: 1; padding: 8px 12px; font-size: 13px; border: 0.5px solid var(--c-border-tertiary); border-radius: var(--r-md); background: transparent; color: var(--c-text-secondary); cursor: pointer; font-family: inherit; }
+  .mode-btn.active { background: var(--c-bg-info); color: var(--c-text-info); border-color: var(--c-border-info); }
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .field-grid[data-mode="morning"] .start-field { display: none; }
+  .field-grid[data-mode="morning"] .full-on-morning { grid-column: 1 / -1; }
+  .calc-details, .settings-details, .export-details {
+    padding: 10px 12px;
+    background: var(--c-bg-primary);
+    border-radius: var(--r-md);
+    border: 0.5px solid var(--c-border-tertiary);
+    margin-top: 12px;
+  }
+  .calc-details summary, .settings-details summary, .export-details summary {
+    font-size: 12px; color: var(--c-text-secondary); cursor: pointer; font-weight: 500; outline: none;
+  }
+  .ce-row {
+    display: flex; justify-content: space-between; padding: 4px 0;
+    font-size: 11px; color: var(--c-text-secondary); border-bottom: 0.5px solid var(--c-border-tertiary);
+  }
+  .ce-row:last-child { border-bottom: none; }
+  .term-link { color: var(--c-text-info); text-decoration: underline; cursor: pointer; }
+  
+  .verdict-box { border-radius: var(--r-md); padding: 12px; transition: background 0.3s; }
+  .verdict-success { background: var(--c-bg-success); color: var(--c-text-success); }
+  .verdict-warning { background: var(--c-bg-warning); color: var(--c-text-warning); }
+  .verdict-danger { background: var(--c-bg-danger); color: var(--c-text-danger); }
+  .verdict-neutral { background: var(--c-bg-secondary); color: var(--c-text-secondary); }
+  .verdict-icon { font-size: 14px; font-weight: 600; margin-right: 6px; display: inline-block; }
+  
+  .alert-box { border-radius: var(--r-md); padding: 10px 12px; margin-bottom: 12px; font-size: 12px; }
+  .alert-warning { background: var(--c-bg-warning); color: var(--c-text-warning); }
+  .alert-danger { background: var(--c-bg-danger); color: var(--c-text-danger); }
+  
+  select, input[type="number"], textarea, input[type="text"] {
+    font-family: inherit;
+    font-size: 14px;
+    padding: 8px 10px;
+    border: 0.5px solid var(--c-border-tertiary);
+    border-radius: var(--r-md);
+    background: var(--c-bg-primary);
+    color: var(--c-text-primary);
+    width: 100%;
+    box-sizing: border-box;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  
+  .input-with-plus { display: flex; gap: 4px; align-items: center; }
+  .input-with-plus input { flex: 1; min-width: 0; }
+  .plus-btn {
+    width: 36px; height: 36px; flex-shrink: 0;
+    border: 0.5px solid var(--c-border-info);
+    background: var(--c-bg-info);
+    color: var(--c-text-info);
+    border-radius: var(--r-md);
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    padding: 0;
+    line-height: 1;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .plus-btn:active { transform: scale(0.95); }
+  .reset-btn {
+    padding: 6px 12px; font-size: 12px;
+    border: 0.5px solid var(--c-border-tertiary);
+    border-radius: var(--r-md);
+    background: transparent;
+    color: var(--c-text-secondary);
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .preset-btn {
+    padding: 4px 10px; font-size: 11px;
+    border: 0.5px solid var(--c-border-tertiary);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--c-text-secondary);
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .preset-btn.active {
+    background: var(--c-bg-info);
+    color: var(--c-text-info);
+    border-color: var(--c-border-info);
+  }
+  .copy-btn {
+    width: 100%; padding: 8px; font-size: 12px;
+    border: 0.5px solid var(--c-border-info);
+    background: transparent;
+    color: var(--c-text-info);
+    border-radius: var(--r-md);
+    cursor: pointer;
+    font-family: inherit;
+    margin-top: 8px;
+  }
+  .copy-btn:active { background: var(--c-bg-info); }
+  
+  #snapshotText {
+    width: 100%; height: 140px; box-sizing: border-box;
+    font-size: 11px;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    resize: vertical;
+  }
+  
+  #toast {
+    position: fixed; bottom: 20px; left: 50%;
+    transform: translateX(-50%);
+    background: var(--c-text-primary);
+    color: var(--c-bg-primary);
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+  }
+  #toast.show { opacity: 1; }
+  
+  /* ===== Knowledge Base UI ===== */
+  .kb-tab-btn {
+    flex: 1; padding: 8px 12px; font-size: 13px;
+    border: 0.5px solid var(--c-border-tertiary);
+    border-radius: var(--r-md);
+    background: transparent;
+    color: var(--c-text-secondary);
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .kb-tab-btn.active {
+    background: var(--c-bg-info);
+    color: var(--c-text-info);
+    border-color: var(--c-border-info);
+  }
+  .cat-chip {
+    padding: 4px 10px; font-size: 11px;
+    border: 0.5px solid var(--c-border-tertiary);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--c-text-secondary);
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+  }
+  .cat-chip.active {
+    background: var(--c-bg-secondary);
+    color: var(--c-text-primary);
+    border-color: var(--c-border-secondary);
+    font-weight: 500;
+  }
+  .term-row {
+    padding: 12px 14px;
+    border-bottom: 0.5px solid var(--c-border-tertiary);
+    cursor: pointer;
+  }
+  .term-row:hover { background: var(--c-bg-secondary); }
+  .term-row:last-child { border-bottom: none; }
+  .term-name { font-size: 14px; font-weight: 500; color: var(--c-text-primary); margin: 0 0 2px; }
+  .term-def { font-size: 12px; color: var(--c-text-secondary); margin: 0; line-height: 1.5; }
+  
+  .article-card {
+    padding: 14px;
+    border: 0.5px solid var(--c-border-tertiary);
+    border-radius: var(--r-md);
+    margin-bottom: 10px;
+    cursor: pointer;
+  }
+  .article-card:hover { background: var(--c-bg-secondary); }
+  .article-card-title { font-size: 14px; font-weight: 500; color: var(--c-text-primary); margin: 0 0 4px; }
+  .article-card-summary { font-size: 12px; color: var(--c-text-secondary); margin: 0 0 6px; line-height: 1.5; }
+  .article-card-meta { font-size: 10px; color: var(--c-text-tertiary); margin: 0; }
+  
+  .detail-back {
+    font-size: 13px; color: var(--c-text-info);
+    cursor: pointer; padding: 8px 0;
+    display: inline-block;
+    font-family: inherit;
+    background: none; border: none;
+  }
+  .detail-title { font-size: 18px; font-weight: 500; margin: 8px 0 12px; line-height: 1.4; }
+  .detail-body { font-size: 13px; line-height: 1.7; color: var(--c-text-primary); }
+  .detail-body h3 { font-size: 15px; font-weight: 500; margin: 18px 0 8px; }
+  .detail-body h4 { font-size: 13px; font-weight: 500; margin: 12px 0 6px; color: var(--c-text-secondary); }
+  .detail-body p { margin: 0 0 12px; }
+  .detail-body ul, .detail-body ol { padding-left: 20px; margin: 0 0 12px; }
+  .detail-body li { margin: 4px 0; }
+  .detail-body strong { font-weight: 500; }
+  .table-wrap { overflow-x: auto; margin: 12px 0; -webkit-overflow-scrolling: touch; }
+  .detail-body table { border-collapse: collapse; font-size: 11px; min-width: 100%; }
+  .detail-body th {
+    background: var(--c-bg-secondary);
+    padding: 6px 8px; text-align: left;
+    border-bottom: 0.5px solid var(--c-border-tertiary);
+    white-space: nowrap;
+    font-weight: 500;
+  }
+  .detail-body td {
+    padding: 6px 8px;
+    border-bottom: 0.5px solid var(--c-border-tertiary);
+  }
+  
+  .related-terms {
+    margin-top: 12px; padding: 10px 12px;
+    background: var(--c-bg-secondary);
+    border-radius: var(--r-md);
+  }
+  .related-label { font-size: 11px; color: var(--c-text-tertiary); margin: 0 0 4px; }
+  .related-link {
+    font-size: 12px; color: var(--c-text-info);
+    margin-right: 8px; cursor: pointer;
+  }
+  .empty-state {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--c-text-tertiary);
+    font-size: 13px;
+  }
+  
+  /* Footer */
+  .site-footer {
+    text-align: center;
+    font-size: 10px;
+    color: var(--c-text-tertiary);
+    margin: 16px 0 0 0;
+    line-height: 1.6;
+  }
+  .site-footer a { color: var(--c-text-info); }
+</style>
+</head>
+<body>
+<div class="app-frame">
+<div id="toast">コピーしました</div>
+
+<div style="padding: 0.75rem 1.25rem 0.5rem; border-bottom: 0.5px solid var(--c-border-tertiary);">
+<p style="font-size: 11px; color: var(--c-text-tertiary); margin: 0; letter-spacing: 0.05em;">スロット相棒</p>
+</div>
+<div style="display: flex; border-bottom: 0.5px solid var(--c-border-tertiary);">
+<button class="app-tab active" data-page="calculator" onclick="showPage('calculator')">期待値計算機</button>
+<button class="app-tab" data-page="knowledge" onclick="showPage('knowledge')">知識ベース</button>
+</div>
+
+<!-- ============ CALCULATOR PAGE ============ -->
+<div id="page-calculator" class="app-page">
+<div style="padding: 1rem 1.25rem; border-bottom: 0.5px solid var(--c-border-tertiary); display: flex; gap: 8px; align-items: center;">
+<select id="machineSelect" onchange="selectMachine(this.value)" style="flex: 1;">
+<option value="myJugV">マイジャグラー5</option>
+<option value="iJugEX">アイムジャグラーEX</option>
+<option value="funky2">ファンキージャグラー2</option>
+<option value="gogo3">ゴーゴージャグラー3</option>
+</select>
+<button class="reset-btn" onclick="resetAll()">リセット</button>
+</div>
+<div style="padding: 0 1.25rem 0.75rem; border-bottom: 0.5px solid var(--c-border-tertiary);">
+<p id="machineHint" style="font-size: 11px; color: var(--c-text-tertiary); margin: 6px 0 0;">主要設定差: ぶどう・単独REG・チェリー重複BIG</p>
+</div>
+<div style="padding: 1rem 1.25rem; border-bottom: 0.5px solid var(--c-border-tertiary);">
+<p style="font-size: 12px; color: var(--c-text-secondary); margin: 0 0 8px; font-weight: 500;">観測モード</p>
+<div style="display: flex; gap: 8px;">
+<button class="mode-btn" data-mode="morning" onclick="setMode('morning')">朝イチから</button>
+<button class="mode-btn active" data-mode="hyena" onclick="setMode('hyena')">途中から(ハイエナ)</button>
+</div>
+</div>
+<div style="padding: 1.25rem;">
+<details class="settings-details" style="margin: 0 0 16px;">
+<summary>詳細設定(円換算)</summary>
+<div style="margin-top: 10px;">
+<p style="font-size: 11px; color: var(--c-text-secondary); margin: 0 0 6px;">プリセット</p>
+<div style="display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap;">
+<button class="preset-btn active" data-preset="equiv" onclick="setPreset('equiv')">等価交換(20円)</button>
+<button class="preset-btn" data-preset="five" onclick="setPreset('five')">5枚交換(16円)</button>
+<button class="preset-btn" data-preset="six" onclick="setPreset('six')">6枚交換(13.3円)</button>
+</div>
+<div class="field-grid" style="gap: 8px;">
+<div><label style="display: block; font-size: 11px; color: var(--c-text-secondary); margin-bottom: 4px;">1Gあたり掛け枚数</label><input id="bet" type="number" inputmode="numeric" value="3"/></div>
+<div><label style="display: block; font-size: 11px; color: var(--c-text-secondary); margin-bottom: 4px;">1枚あたり貸し金(円)</label><input id="yenPerCoin" type="number" inputmode="numeric" value="20"/></div>
+<div><label style="display: block; font-size: 11px; color: var(--c-text-secondary); margin-bottom: 4px;">1時間あたりG数</label><input id="hourG" type="number" inputmode="numeric" value="800"/></div>
+</div>
+</div>
+</details>
+<p style="font-size: 12px; color: var(--c-text-secondary); margin: 0 0 8px; font-weight: 500;">観測範囲(ゲーム数)</p>
+<div class="field-grid" id="g-grid" data-mode="hyena">
+<div class="start-field"><label style="display: block; font-size: 12px; color: var(--c-text-secondary); margin-bottom: 4px;">スタート時G</label><input id="startG" type="number" inputmode="numeric" value="0"/></div>
+<div class="full-on-morning"><label style="display: block; font-size: 12px; color: var(--c-text-secondary); margin-bottom: 4px;">現在G</label><input id="nowG" type="number" inputmode="numeric" value="0"/></div>
+</div>
+<p id="sampleG" style="font-size: 11px; color: var(--c-text-tertiary); margin: 6px 0 16px;">観測サンプル: 0ゲーム</p>
+<p style="font-size: 12px; color: var(--c-text-secondary); margin: 0 0 4px; font-weight: 500;">ボーナス回数</p>
+<p style="font-size: 11px; color: var(--c-text-tertiary); margin: 0 0 8px;">ボーナス引いたら +1 をタップ</p>
+<div class="field-grid" id="boss-grid" data-mode="hyena" style="margin-bottom: 16px;">
+<div class="start-field"><label style="display: block; font-size: 12px; color: var(--c-text-secondary); margin-bottom: 4px;">スタート時BIG</label><input id="startBig" type="number" inputmode="numeric" value="0"/></div>
+<div><label style="display: block; font-size: 12px; color: var(--c-text-secondary); margin-bottom: 4px;">現在BIG</label><div class="input-with-plus"><input id="big" type="number" inputmode="numeric" value="0"/><button class="plus-btn" onclick="inc('big')">+1</button></div><p id="bigRate" class="rate-display">≈ 1/—</p></div>
+<div class="start-field"><label style="display: block; font-size: 12px; color: var(--c-text-secondary); margin-bottom: 4px;">スタート時REG</label><input id="startReg" type="number" inputmode="numeric" value="0"/></div>
+<div><label style="display: block; font-size: 12px; color: var(--c-text-secondary); margin-bottom: 4px;">現在REG</label><div class="input-with-plus"><input id="reg" type="number" inputmode="numeric" value="0"/><button class="plus-btn" onclick="inc('reg')">+1</button></div><p id="regRate" class="rate-display">≈ 1/—</p></div>
+</div>
+<p style="font-size: 12px; color: var(--c-text-secondary); margin: 0 0 4px; font-weight: 500;">設定差のある子役</p>
+<p style="font-size: 11px; color: var(--c-text-tertiary); margin: 0 0 8px;">小役引いたら +1 をタップ</p>
+<div style="display: flex; flex-direction: column; gap: 12px;">
+<div id="field-grape"><label style="display: block; font-size: 12px; color: var(--c-text-secondary); margin-bottom: 4px;">ぶどう</label><div class="input-with-plus"><input id="grape" type="number" inputmode="numeric" value="0"/><button class="plus-btn" onclick="inc('grape')">+1</button></div><p id="grapeRate" class="rate-display">≈ 1/—</p></div>
+<div id="field-soloREG"><label style="display: block; font-size: 12px; color: var(--c-text-secondary); margin-bottom: 4px;">単独REG</label><div class="input-with-plus"><input id="soloREG" type="number" inputmode="numeric" value="0"/><button class="plus-btn" onclick="inc('soloREG')">+1</button></div><p id="soloREGRate" class="rate-display">≈ 1/—</p></div>
+<div id="field-cherryBIG"><label style="display: block; font-size: 12px; color: var(--c-text-secondary); margin-bottom: 4px;">チェリー重複BIG</label><div class="input-with-plus"><input id="cherryBIG" type="number" inputmode="numeric" value="0"/><button class="plus-btn" onclick="inc('cherryBIG')">+1</button></div><p id="cherryBIGRate" class="rate-display">≈ 1/—</p></div>
+</div>
+</div>
+<div style="padding: 1.25rem; background: var(--c-bg-secondary); border-top: 0.5px solid var(--c-border-tertiary);">
+<div id="alertContainer"></div>
+<div id="verdict" class="verdict-box verdict-neutral" style="margin-bottom: 12px;">
+<div style="display: flex; align-items: baseline; justify-content: space-between;">
+<span style="font-size: 12px;">推定機械割</span>
+<span><span id="payoutIcon" class="verdict-icon"></span><span id="payout" style="font-size: 22px; font-weight: 500;">--%</span></span>
+</div>
+<div style="text-align: right; margin-top: 2px;">
+<span id="payoutCI" style="font-size: 11px; opacity: 0.7;">予測区間: --</span>
+</div>
+<div style="display: flex; align-items: baseline; justify-content: space-between; margin-top: 6px;">
+<span style="font-size: 12px;">期待値(1時間あたり)</span>
+<span id="hourlyValue" style="font-size: 16px; font-weight: 500;">--円</span>
+</div>
+<p id="verdictText" style="font-size: 12px; margin: 8px 0 0;">観測範囲を入力してください</p>
+</div>
+<details class="export-details" style="margin: 0 0 16px;">
+<summary>データ出力(コピー用)</summary>
+<div style="margin-top: 10px;">
+<textarea id="snapshotText" readonly placeholder="観測データを入力するとここに出力されます"></textarea>
+<button class="copy-btn" onclick="copySnapshot()">クリップボードにコピー</button>
+</div>
+</details>
+<p style="font-size: 13px; color: var(--c-text-secondary); margin: 0 0 12px; font-weight: 500;">設定推測の内訳</p>
+<div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px;">
+<div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 12px; width: 36px; color: var(--c-text-secondary);">設定1</span><div class="bar-wrapper"><div id="bar1" class="bar-fill" style="width: 0%; background: var(--c-text-tertiary);"></div></div><span id="pct1" style="font-size: 12px; color: var(--c-text-secondary); width: 36px; text-align: right;">--</span></div>
+<div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 12px; width: 36px; color: var(--c-text-secondary);">設定2</span><div class="bar-wrapper"><div id="bar2" class="bar-fill" style="width: 0%; background: var(--c-text-tertiary);"></div></div><span id="pct2" style="font-size: 12px; color: var(--c-text-secondary); width: 36px; text-align: right;">--</span></div>
+<div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 12px; width: 36px; color: var(--c-text-secondary);">設定3</span><div class="bar-wrapper"><div id="bar3" class="bar-fill" style="width: 0%; background: var(--c-text-tertiary);"></div></div><span id="pct3" style="font-size: 12px; color: var(--c-text-secondary); width: 36px; text-align: right;">--</span></div>
+<div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 12px; width: 36px; color: var(--c-text-primary); font-weight: 500;">設定4</span><div class="bar-wrapper"><div id="bar4" class="bar-fill" style="width: 0%; background: var(--c-text-info);"></div></div><span id="pct4" style="font-size: 12px; color: var(--c-text-primary); width: 36px; text-align: right; font-weight: 500;">--</span></div>
+<div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 12px; width: 36px; color: var(--c-text-primary); font-weight: 500;">設定5</span><div class="bar-wrapper"><div id="bar5" class="bar-fill" style="width: 0%; background: var(--c-text-info);"></div></div><span id="pct5" style="font-size: 12px; color: var(--c-text-primary); width: 36px; text-align: right; font-weight: 500;">--</span></div>
+<div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 12px; width: 36px; color: var(--c-text-primary); font-weight: 500;">設定6</span><div class="bar-wrapper"><div id="bar6" class="bar-fill" style="width: 0%; background: var(--c-text-info);"></div></div><span id="pct6" style="font-size: 12px; color: var(--c-text-primary); width: 36px; text-align: right; font-weight: 500;">--</span></div>
+</div>
+<details class="calc-details">
+<summary>計算の根拠を見る(用語タップで知識ベースへ)</summary>
+<div id="calcExplanation" style="margin-top: 8px;"></div>
+</details>
+<p id="dataSource" style="font-size: 10px; color: var(--c-text-tertiary); margin: 16px 0 8px; line-height: 1.5;"></p>
+<div style="margin-top: 12px; padding: 10px 12px; border-radius: var(--r-md); border: 0.5px dashed var(--c-border-tertiary);">
+<p style="font-size: 10px; color: var(--c-text-tertiary); margin: 0; line-height: 1.6;"><strong style="color: var(--c-text-secondary);">遊技は余裕資金で。</strong> 詳しくは <span class="term-link" onclick="jumpToArticle('risk-management')">資金管理と責任ある遊技</span> を参照。</p>
+</div>
+</div>
+</div>
+
+<!-- ============ KNOWLEDGE BASE PAGE ============ -->
+<div id="page-knowledge" class="app-page" style="display:none;">
+<div id="kb-listView">
+<div style="padding: 1rem 1.25rem; border-bottom: 0.5px solid var(--c-border-tertiary);">
+<input id="searchBox" type="text" placeholder="用語・記事を検索…" oninput="kbSearch()"/>
+</div>
+<div style="padding: 1rem 1.25rem; border-bottom: 0.5px solid var(--c-border-tertiary);">
+<div style="display: flex; gap: 8px; margin-bottom: 12px;">
+<button class="kb-tab-btn active" data-tab="glossary" onclick="kbSetTab('glossary')">用語集 (35)</button>
+<button class="kb-tab-btn" data-tab="articles" onclick="kbSetTab('articles')">基礎知識 (8)</button>
+</div>
+<div id="catFilter" style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px;">
+<button class="cat-chip active" data-cat="all" onclick="kbSetCat('all')">すべて</button>
+<button class="cat-chip" data-cat="bonus" onclick="kbSetCat('bonus')">ボーナス・小役</button>
+<button class="cat-chip" data-cat="estimation" onclick="kbSetCat('estimation')">設定推測</button>
+<button class="cat-chip" data-cat="tachimawari" onclick="kbSetCat('tachimawari')">立ち回り</button>
+<button class="cat-chip" data-cat="kishu" onclick="kbSetCat('kishu')">機種・基礎</button>
+</div>
+</div>
+<div id="listContainer"></div>
+</div>
+<div id="kb-detailView" style="display: none; padding: 1rem 1.25rem;">
+<button class="detail-back" onclick="kbBackToList()">← 戻る</button>
+<div id="detailContent"></div>
+</div>
+</div>
+
+</div>
+
+<p class="site-footer">
+スロット相棒 v1.0 / プロトタイプ<br>
+本ツールは設定推測の参考情報を提供するものであり、出玉を保証するものではありません。<br>
+依存が気になる方は <a href="https://gamblingaddiction.jp/" target="_blank" rel="noopener">ギャンブル依存症問題を考える会</a> へ
+</p>
+
+<script>
+/* ===== App tabs ===== */
+function showPage(p) {
+  document.querySelectorAll('.app-page').forEach(x => x.style.display = 'none');
+  document.getElementById('page-' + p).style.display = 'block';
+  document.querySelectorAll('.app-tab').forEach(t => t.classList.toggle('active', t.dataset.page === p));
+  window.scrollTo(0, 0);
+}
+function jumpToTerm(id) { showPage('knowledge'); kbSetTab('glossary'); setTimeout(() => kbShowTerm(id), 30); }
+function jumpToArticle(id) { showPage('knowledge'); kbSetTab('articles'); setTimeout(() => kbShowArticle(id), 30); }
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+/* ===== Machine Data ===== */
+const machines = {
+  myJugV: {
+    name: "マイジャグラー5",
+    BIG: [273.1,270.8,266.4,254.0,240.1,229.1],
+    REG: [409.6,385.5,336.1,290.0,268.6,229.1],
+    soloBIG: [409.60,407.06,399.61,378.82,354.25,337.81],
+    soloREG: [655.36,601.25,492.75,407.06,390.10,327.68],
+    cherryBIG: [1424.70,1394.38,1365.33,1285.02,1213.63,1129.93],
+    cherryREG: [1090,1016,946,881,820,762],
+    grape: [5.90,5.85,5.80,5.78,5.76,5.66],
+    payout: [97.0,98.0,99.5,102.8,105.3,109.4],
+    inputs: ['grape','soloREG','cherryBIG'],
+    hint: "主要設定差: ぶどう・単独REG・チェリー重複BIG",
+    source: "解析データ出典: note (pachiprotool), juggler7.com / 角チェリー重複REGは推定値"
+  },
+  iJugEX: {
+    name: "アイムジャグラーEX",
+    BIG: [273.1,269.7,269.7,259.0,259.0,255.0],
+    REG: [439.8,399.6,331.0,315.1,255.0,255.0],
+    soloBIG: null,
+    soloREG: [633.0,565.0,506.0,452.0,405.0,361.7],
+    cherryBIG: null,
+    cherryREG: [1443.0,1304.0,1175.0,1062.0,959.0,864.1],
+    grape: [6.02,6.02,6.02,6.02,6.02,5.78],
+    payout: [97.0,98.0,99.5,101.1,103.3,105.5],
+    inputs: ['grape','soloREG'],
+    hint: "主要設定差: ぶどう(設定6のみ)・単独REG",
+    source: "解析データ出典: だくお note, juggler7.com / 単独REG・チェリー重複REGは推定値"
+  },
+  funky2: {
+    name: "ファンキージャグラー2",
+    BIG: [266.4,259.0,256.0,249.2,240.1,219.9],
+    REG: [439.8,407.1,366.1,322.8,299.3,262.1],
+    soloBIG: null,
+    soloREG: [630.15,585.14,512.00,448.88,404.54,352.34],
+    cherryBIG: null,
+    cherryREG: [1456.36,1337.47,1285.02,1149.75,1149.75,1024.00],
+    grape: [5.94,5.92,5.88,5.83,5.76,5.67],
+    payout: [97.0,98.5,99.8,102.5,105.0,109.0],
+    inputs: ['grape','soloREG'],
+    hint: "主要設定差: ぶどう・単独REG・REG",
+    source: "解析データ出典: note (pachiprotool)"
+  },
+  gogo3: {
+    name: "ゴーゴージャグラー3",
+    BIG: [259.0,258.0,257.0,254.0,247.3,234.9],
+    REG: [354.2,332.7,306.2,268.6,247.3,234.9],
+    soloBIG: null, soloREG: null, cherryBIG: null, cherryREG: null,
+    grape: [6.25,6.20,6.15,6.07,6.00,5.92],
+    payout: [98.39,99.36,100.60,102.83,105.08,107.83],
+    inputs: ['grape'],
+    hint: "主要設定差: ぶどう・REG / 設定差小さい難判別機種",
+    source: "解析データ出典: juggler7.com (ガリぞう調べ) / 機械割はチェリー狙い時"
+  }
+};
+
+let currentMachineId = 'myJugV';
+let mode = 'hyena';
+function getMachine() { return machines[currentMachineId]; }
+function inc(id) {
+  const el = document.getElementById(id);
+  if (el) { el.value = (parseInt(el.value) || 0) + 1; update(); }
+}
+function resetAll() {
+  if (!confirm('入力をすべてリセットしますか?(円換算設定は保持)')) return;
+  ['startG','nowG','startBig','big','startReg','reg','grape','soloREG','cherryBIG'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '0';
+  });
+  update();
+}
+function setPreset(p) {
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.toggle('active', b.dataset.preset === p));
+  if (p === 'equiv') document.getElementById('yenPerCoin').value = 20;
+  else if (p === 'five') document.getElementById('yenPerCoin').value = 16;
+  else if (p === 'six') document.getElementById('yenPerCoin').value = 13.3;
+  update();
+}
+function selectMachine(id) {
+  currentMachineId = id;
+  const m = getMachine();
+  document.getElementById('machineHint').textContent = m.hint;
+  document.getElementById('dataSource').textContent = m.source;
+  document.getElementById('field-grape').style.display = m.inputs.includes('grape') ? '' : 'none';
+  document.getElementById('field-soloREG').style.display = m.inputs.includes('soloREG') ? '' : 'none';
+  document.getElementById('field-cherryBIG').style.display = m.inputs.includes('cherryBIG') ? '' : 'none';
+  ['startBig','big','startReg','reg','grape','soloREG','cherryBIG'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '0';
+  });
+  update();
+}
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
+  document.getElementById('g-grid').dataset.mode = m;
+  document.getElementById('boss-grid').dataset.mode = m;
+  if (m === 'morning') {
+    document.getElementById('startG').value = '0';
+    document.getElementById('startBig').value = '0';
+    document.getElementById('startReg').value = '0';
+  }
+  update();
+}
+
+function rateText(c, g) {
+  if (c <= 0 || g <= 0) return '≈ 1/—';
+  const r = g/c;
+  if (r >= 1000) return '≈ 1/' + Math.round(r);
+  if (r >= 100) return '≈ 1/' + r.toFixed(0);
+  if (r >= 10) return '≈ 1/' + r.toFixed(1);
+  return '≈ 1/' + r.toFixed(2);
+}
+function ci90(p, py) {
+  const idx = [0,1,2,3,4,5].sort((a,b) => py[a] - py[b]);
+  let lo = idx[0], hi = idx[5], cum = 0;
+  for (let i = 0; i < 6; i++) { cum += p[idx[i]]; if (cum >= 0.05) { lo = idx[i]; break; } }
+  cum = 0;
+  for (let i = 5; i >= 0; i--) { cum += p[idx[i]]; if (cum >= 0.05) { hi = idx[i]; break; } }
+  return [py[lo], py[hi]];
+}
+function closestSetting(o, r) {
+  let b = 0, d = Infinity;
+  for (let i = 0; i < 6; i++) { const dd = Math.abs(o - r[i]); if (dd < d) { d = dd; b = i; } }
+  return b + 1;
+}
+function indicatorRow(label, count, sample, rates, termId) {
+  if (count <= 0 || sample <= 0 || !rates) return '<div class="ce-row"><span>' + label + '</span><span>—</span></div>';
+  const obs = sample / count, c = closestSetting(obs, rates), rs = rateText(count, sample).replace('≈ ', '');
+  const lh = termId ? '<span class="term-link" onclick="jumpToTerm(\'' + termId + '\')">' + label + '</span>' : label;
+  return '<div class="ce-row"><span>' + lh + ': ' + rs + '</span><span>設定' + c + '付近</span></div>';
+}
+function estimate(obs) {
+  const m = getMachine();
+  const { startG, nowG, startBig, big, startReg, reg, grape, sr, cb } = obs;
+  const koyaku = Math.max(0, nowG - startG);
+  const ownBig = Math.max(0, big - startBig);
+  const ownReg = Math.max(0, reg - startReg);
+  const lls = [0,1,2,3,4,5].map(i => {
+    let ll = 0;
+    if (m.inputs.includes('cherryBIG') && m.soloBIG && m.cherryBIG) {
+      if (startG > 0) {
+        const e = startG / m.BIG[i];
+        if (e > 0) ll += startBig * Math.log(e) - e;
+      }
+      if (koyaku > 0) {
+        const sb = Math.max(0, ownBig - cb);
+        const eS = koyaku / m.soloBIG[i];
+        const eC = koyaku / m.cherryBIG[i];
+        if (eS > 0) ll += sb * Math.log(eS) - eS;
+        if (eC > 0) ll += cb * Math.log(eC) - eC;
+      }
+    } else if (nowG > 0) {
+      const e = nowG / m.BIG[i];
+      if (e > 0) ll += big * Math.log(e) - e;
+    }
+    if (m.inputs.includes('soloREG') && m.soloREG && m.cherryREG) {
+      if (startG > 0) {
+        const e = startG / m.REG[i];
+        if (e > 0) ll += startReg * Math.log(e) - e;
+      }
+      if (koyaku > 0) {
+        const cr = Math.max(0, ownReg - sr);
+        const eS = koyaku / m.soloREG[i];
+        const eC = koyaku / m.cherryREG[i];
+        if (eS > 0) ll += sr * Math.log(eS) - eS;
+        if (eC > 0) ll += cr * Math.log(eC) - eC;
+      }
+    } else if (nowG > 0) {
+      const e = nowG / m.REG[i];
+      if (e > 0) ll += reg * Math.log(e) - e;
+    }
+    if (m.inputs.includes('grape') && koyaku > 0 && grape > 0) {
+      const e = koyaku / m.grape[i];
+      if (e > 0) ll += grape * Math.log(e) - e;
+    }
+    return ll;
+  });
+  const mLl = Math.max(...lls);
+  const exps = lls.map(x => Math.exp(x - mLl));
+  const sum = exps.reduce((a,b)=>a+b, 0);
+  const probs = sum > 0 ? exps.map(x => x/sum) : [1/6,1/6,1/6,1/6,1/6,1/6];
+  const payout = probs.reduce((a,p,i) => a + p * m.payout[i], 0);
+  return { probs, payout };
+}
+function getVerdict(p, ts) {
+  const h = p[3]+p[4]+p[5], l = p[0]+p[1]+p[2];
+  if (ts < 500) return { text: 'サンプル少・参考値(継続観察推奨)', cls: 'verdict-warning', icon: '△' };
+  if (h > 0.7) return { text: '高設定濃厚・続行推奨', cls: 'verdict-success', icon: '◎' };
+  if (h > 0.5) return { text: '高設定の可能性あり・続行', cls: 'verdict-success', icon: '○' };
+  if (l > 0.7) return { text: '低設定の可能性高・撤退検討', cls: 'verdict-danger', icon: '✕' };
+  return { text: '判断微妙・観察継続', cls: 'verdict-warning', icon: '△' };
+}
+function validateInputs(o, k) {
+  const e = [];
+  if (o.nowG < o.startG) e.push('現在Gがスタート時より小さくなっています');
+  if (o.big < o.startBig) e.push('現在BIGがスタート時より小さくなっています');
+  if (o.reg < o.startReg) e.push('現在REGがスタート時より小さくなっています');
+  if (k > 0) {
+    const oB = o.big - o.startBig, oR = o.reg - o.startReg;
+    if (o.cb > oB) e.push('チェリー重複BIGが観測中BIG数を超えています');
+    if (o.sr > oR) e.push('単独REGが観測中REG数を超えています');
+    if (o.grape > k) e.push('ぶどう数が観測Gより多いです');
+  }
+  return e;
+}
+
+function update() {
+  const m = getMachine();
+  const get = id => Math.max(0, parseInt(document.getElementById(id).value) || 0);
+  const getF = id => Math.max(0, parseFloat(document.getElementById(id).value) || 0);
+  const o = {
+    startG: get('startG'),
+    nowG: get('nowG'),
+    startBig: get('startBig'),
+    big: get('big'),
+    startReg: get('startReg'),
+    reg: get('reg'),
+    grape: m.inputs.includes('grape') ? get('grape') : 0,
+    sr: m.inputs.includes('soloREG') ? get('soloREG') : 0,
+    cb: m.inputs.includes('cherryBIG') ? get('cherryBIG') : 0
+  };
+  const koyaku = Math.max(0, o.nowG - o.startG);
+  if (o.startG > 0 && koyaku > 0) {
+    document.getElementById('sampleG').textContent = '子役: ' + koyaku.toLocaleString() + 'G / ボーナス: ' + o.nowG.toLocaleString() + 'G';
+  } else {
+    document.getElementById('sampleG').textContent = '観測サンプル: ' + o.nowG.toLocaleString() + 'ゲーム';
+  }
+  document.getElementById('bigRate').textContent = rateText(o.big, o.nowG);
+  document.getElementById('regRate').textContent = rateText(o.reg, o.nowG);
+  if (m.inputs.includes('grape')) document.getElementById('grapeRate').textContent = rateText(o.grape, koyaku);
+  if (m.inputs.includes('soloREG')) document.getElementById('soloREGRate').textContent = rateText(o.sr, koyaku);
+  if (m.inputs.includes('cherryBIG')) document.getElementById('cherryBIGRate').textContent = rateText(o.cb, koyaku);
+  
+  const errs = validateInputs(o, koyaku);
+  const aE = document.getElementById('alertContainer');
+  if (errs.length > 0) {
+    aE.innerHTML = '<div class="alert-box alert-danger"><strong>△ 入力エラー</strong><br>' + errs.map(e => '・' + e).join('<br>') + '</div>';
+  } else if (o.nowG > 0 && o.nowG < 1000) {
+    aE.innerHTML = '<div class="alert-box alert-warning"><strong>△ サンプル不足</strong><br>1,000G未満は推定精度が低めです。</div>';
+  } else {
+    aE.innerHTML = '';
+  }
+  
+  const v = document.getElementById('verdict');
+  if (o.nowG <= 0) {
+    document.getElementById('payout').textContent = '--%';
+    document.getElementById('payoutIcon').textContent = '';
+    document.getElementById('payoutCI').textContent = '予測区間: --';
+    document.getElementById('hourlyValue').textContent = '--円';
+    document.getElementById('verdictText').textContent = '・ 観測範囲を入力してください';
+    v.className = 'verdict-box verdict-neutral';
+    for (let i = 1; i <= 6; i++) {
+      document.getElementById('bar'+i).style.width = '0%';
+      document.getElementById('pct'+i).textContent = '--';
+    }
+    document.getElementById('calcExplanation').innerHTML = '<p style="font-size: 11px; color: var(--c-text-tertiary);">データを入力すると根拠が表示されます。</p>';
+    document.getElementById('snapshotText').value = '';
+    return;
+  }
+  
+  const { probs, payout } = estimate(o);
+  for (let i = 0; i < 6; i++) {
+    const pct = Math.round(probs[i]*100);
+    document.getElementById('bar'+(i+1)).style.width = pct + '%';
+    document.getElementById('pct'+(i+1)).textContent = pct + '%';
+  }
+  document.getElementById('payout').textContent = payout.toFixed(1) + '%';
+  const [lo, hi] = ci90(probs, m.payout);
+  document.getElementById('payoutCI').textContent = '予測区間: ' + lo.toFixed(1) + '% 〜 ' + hi.toFixed(1) + '% (90%)';
+  
+  const bet = getF('bet') || 3, ypc = getF('yenPerCoin') || 20, hG = getF('hourG') || 800;
+  const hourlyYen = Math.round((payout - 100) / 100 * hG * bet * ypc);
+  const sign = hourlyYen >= 0 ? '+' : '−';
+  document.getElementById('hourlyValue').textContent = sign + Math.abs(hourlyYen).toLocaleString() + '円';
+  
+  const ver = getVerdict(probs, o.nowG);
+  document.getElementById('verdictText').textContent = ver.icon + ' ' + ver.text;
+  document.getElementById('payoutIcon').textContent = ver.icon;
+  v.className = 'verdict-box ' + ver.cls;
+  
+  const combined = m.BIG.map((b, i) => 1/(1/b + 1/m.REG[i]));
+  let exp = indicatorRow('ボーナス合算', o.big + o.reg, o.nowG, combined, 'gosan');
+  if (m.inputs.includes('grape')) exp += indicatorRow('ぶどう(観測中)', o.grape, koyaku, m.grape, 'budou');
+  if (m.inputs.includes('soloREG') && m.soloREG) exp += indicatorRow('単独REG(観測中)', o.sr, koyaku, m.soloREG, 'tandoku-reg');
+  if (m.inputs.includes('cherryBIG') && m.cherryBIG) exp += indicatorRow('チェリー重複BIG(観測中)', o.cb, koyaku, m.cherryBIG, 'cherry-juufuku');
+  exp += '<p style="font-size: 11px; color: var(--c-text-tertiary); margin-top: 8px;">' + m.name + ' / 用語タップで <span class="term-link" onclick="jumpToArticle(\'kikaiwari-kitaichi\')">機械割と期待値の関係</span> 記事へ</p>';
+  document.getElementById('calcExplanation').innerHTML = exp;
+  
+  // Snapshot text
+  const now = new Date();
+  const ts = now.getFullYear() + '/' + String(now.getMonth()+1).padStart(2,'0') + '/' + String(now.getDate()).padStart(2,'0') + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  const lines = [
+    '【' + m.name + '】観測 ' + ts,
+    'ゲーム数: ' + o.nowG.toLocaleString() + 'G' + (o.startG > 0 ? ' (途中 ' + o.startG.toLocaleString() + 'Gから)' : ''),
+    'BIG: ' + o.big + ' / REG: ' + o.reg + ' (合算 ' + rateText(o.big + o.reg, o.nowG).replace('≈ ', '') + ')'
+  ];
+  if (m.inputs.includes('grape')) lines.push('ぶどう: ' + o.grape + ' (' + rateText(o.grape, koyaku).replace('≈ ', '') + ')');
+  if (m.inputs.includes('soloREG')) lines.push('単独REG: ' + o.sr);
+  if (m.inputs.includes('cherryBIG')) lines.push('チェリー重複BIG: ' + o.cb);
+  lines.push('---');
+  lines.push('推定機械割: ' + payout.toFixed(1) + '%');
+  lines.push('予測区間 (90%): ' + lo.toFixed(1) + '% 〜 ' + hi.toFixed(1) + '%');
+  lines.push('期待値(1時間): ' + sign + Math.abs(hourlyYen).toLocaleString() + '円');
+  lines.push('判定: ' + ver.icon + ' ' + ver.text);
+  lines.push('');
+  lines.push('設定確率分布:');
+  for (let i = 0; i < 6; i++) lines.push('  設定' + (i+1) + ': ' + Math.round(probs[i]*100) + '%');
+  lines.push('');
+  lines.push('スロット相棒');
+  document.getElementById('snapshotText').value = lines.join('\n');
+}
+
+function copySnapshot() {
+  const ta = document.getElementById('snapshotText');
+  if (!ta.value) { showToast('データなし'); return; }
+  ta.select();
+  ta.setSelectionRange(0, ta.value.length);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(ta.value).then(() => showToast('コピーしました')).catch(() => {
+      try { document.execCommand('copy'); showToast('コピーしました'); }
+      catch(e) { showToast('手動でコピーしてください'); }
+    });
+  } else {
+    try { document.execCommand('copy'); showToast('コピーしました'); }
+    catch(e) { showToast('手動でコピーしてください'); }
+  }
+}
+
+['startG','nowG','startBig','big','startReg','reg','grape','soloREG','cherryBIG','bet','yenPerCoin','hourG'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', update);
+});
+
+/* ===== Knowledge Base Data ===== */
+const terms = [
+  { id: 'big', cat: 'bonus', name: 'BIG (BIGボーナス)', def: '純増約240枚のボーナス。赤7揃いで成立する。ジャグラーシリーズの主力出玉源。' },
+  { id: 'reg', cat: 'bonus', name: 'REG (REGボーナス・バケ)', def: '純増約96枚のボーナス。「バケ」とも呼ばれる。設定差の出やすさが特徴。' },
+  { id: 'gogolamp', cat: 'bonus', name: 'GOGO!ランプ', def: 'ジャグラーシリーズの告知ランプ。点灯すればボーナス確定。' },
+  { id: 'gosan', cat: 'bonus', name: 'ボーナス合算確率', def: 'BIG確率とREG確率を合計したもの。設定推測の最も基本的な指標。' },
+  { id: 'tandoku-big', cat: 'bonus', name: '単独BIG', def: '小役と重複せず単独で成立したBIG。設定差は小さめ。' },
+  { id: 'tandoku-reg', cat: 'bonus', name: '単独REG', def: '小役と重複せず単独で成立したREG。多くの機種で大きな設定差あり、重要指標。' },
+  { id: 'cherry-juufuku', cat: 'bonus', name: 'チェリー重複', def: 'チェリー成立時に同時抽選されるボーナス。BIG・REGどちらもある。' },
+  { id: 'kaku-cherry', cat: 'bonus', name: '角チェリー', def: '左リール枠内に停止するチェリー。共通チェリーとも呼ぶ。' },
+  { id: 'chudan-cherry', cat: 'bonus', name: '中段チェリー', def: '左リール中段にビタ停止する特殊チェリー。BIG確定の機種が多い。' },
+  { id: 'budou', cat: 'bonus', name: 'ぶどう', def: '主力小役。約1/6の高頻度で出現。多くの機種で設定差あり、判別の基礎。' },
+  { id: 'settei', cat: 'estimation', name: '設定1〜6', def: '台ごとに6段階で設定された出玉率の段階。6が最も甘く、1が最も辛い。' },
+  { id: 'settei-sa', cat: 'estimation', name: '設定差', def: '設定1と6の確率比。差が大きい項目ほど判別に使いやすい。' },
+  { id: 'settei-suisoku', cat: 'estimation', name: '設定推測 / 看破', def: 'ボーナスや小役の出現率から実際の設定を推定する行為。' },
+  { id: 'kou-settei', cat: 'estimation', name: '高設定 / 低設定', def: '機械割100%超を高設定、未満を低設定と呼ぶ。一般に4〜6が高設定とされる。' },
+  { id: 'beta-pin', cat: 'estimation', name: 'ベタピン / 中間設定', def: 'ベタピン=全台設定1。中間設定=2〜4。' },
+  { id: 'kikaiwari', cat: 'estimation', name: '機械割', def: '長期的に打った時の出玉率。100%超なら理論上は勝てる設定。' },
+  { id: 'br-hiritsu', cat: 'estimation', name: 'BR比率', def: 'BIG回数とREG回数の比率。多くの機種で高設定はREG寄りになる。' },
+  { id: 'reset', cat: 'estimation', name: '設定変更 / リセット', def: '前日と異なる設定を投入する行為。リセット時の挙動に違いあり。' },
+  { id: 'gakkun', cat: 'estimation', name: 'ガックンチェック', def: '朝イチ1G目のリール挙動から、設定変更があったか見抜く技術。' },
+  { id: 'koyaku-count', cat: 'estimation', name: '子役カウント', def: 'ぶどう・チェリー等の出現回数を数える行為。設定推測の必須作業。' },
+  { id: 'asaichi', cat: 'tachimawari', name: '朝イチ', def: '開店直後から打ち始める立ち回り。設定狙いの主流スタイル。' },
+  { id: 'hyena', cat: 'tachimawari', name: 'ハイエナ', def: '前任の打ち手のデータから、期待値が残る台を狙う立ち回り。' },
+  { id: 'tenjou-nerai', cat: 'tachimawari', name: '天井狙い', def: '一定G数到達でボーナス確定する機種で、その手前から打つ立ち回り。' },
+  { id: 'yame-doki', cat: 'tachimawari', name: 'ヤメ時', def: '打ち止めるタイミング。立ち回りの中で重要な判断ポイント。' },
+  { id: 'settei-nerai', cat: 'tachimawari', name: '設定狙い', def: '高設定が入っていそうな台を朝から狙う立ち回り。リスク高めだが期待値も高い。' },
+  { id: 'sueoki', cat: 'tachimawari', name: '据え置き', def: '前日の設定を変えずにそのまま運用すること。前日の出玉から判断できる場合あり。' },
+  { id: 'shima', cat: 'tachimawari', name: 'シマ', def: '同じ機種が並んでいる一列のこと。シマ全体の状況から平均設定を見抜く。' },
+  { id: 'budou-nuki', cat: 'tachimawari', name: 'ぶどう抜き', def: 'ボーナス成立後に1枚掛けでぶどうを抜く攻略法。機械割を1〜1.5%向上させる。' },
+  { id: 'a-type', cat: 'kishu', name: 'ノーマルAタイプ', def: 'ボーナスのみで出玉を増やすタイプ。ジャグラーシリーズが代表例。' },
+  { id: 'at', cat: 'kishu', name: 'AT機 / ART機', def: 'AT(アシストタイム)で大量出玉を狙うタイプの機種。ジャグラーとは仕様が大きく異なる。' },
+  { id: 'sumasuro', cat: 'kishu', name: 'スマスロ (スマートパチスロ)', def: 'メダルレスのスマートパチスロ。新世代の規格で、上限獲得枚数などが拡張された。' },
+  { id: '6gouki', cat: 'kishu', name: '6号機 / 5号機 / 4号機', def: '出玉規制の世代。古い世代ほど出玉が大きく、新しい世代ほど抑えられている。' },
+  { id: 'jaguar-series', cat: 'kishu', name: 'ジャグラーシリーズ', def: '北電子製のノーマルAタイプ機シリーズ。マイ・アイム・ファンキー・ゴージャグなど多数。' },
+  { id: 'beesu', cat: 'kishu', name: 'ベース(50枚あたり回転数)', def: '50枚で何G回るかの指標。コイン持ちの良さを表す。' },
+  { id: 'toka', cat: 'kishu', name: '等価交換 / 換金率', def: '1枚=20円で換金できるのが等価交換。5枚交換などは非等価で実質的な機械割が下がる。' }
+];
+
+const articles = [
+  { id: 'how-slot-works', title: 'スロットってどういう仕組み?', summary: 'スロットの基本的な仕組み、ボーナス、小役、出玉の流れを初心者向けに解説。' },
+  { id: 'a-type-vs-at', title: 'ノーマルAタイプとAT機の違い', summary: 'ジャグラーのようなAタイプと、AT機の出玉構造の違いを比較。' },
+  { id: 'what-is-settei', title: '設定推測とは? なぜ大事なのか', summary: 'スロットで勝つために最も重要な「設定」の概念と、推測の意味を解説。' },
+  { id: 'jaguar-comparison', title: 'ジャグラーシリーズ徹底比較', summary: 'マイジャグラー5・アイムジャグラーEX・ファンキージャグラー2・ゴーゴージャグラー3の違い。' },
+  { id: 'koyaku-counting', title: '子役カウントの方法と意味', summary: 'なぜ子役を数えるのか、どう数えるのか、何個から精度が出るのかを解説。' },
+  { id: 'tachimawari-basics', title: '立ち回りの基本: 朝イチ・ハイエナ・ヤメ時', summary: '初心者がまず覚えるべき3つの立ち回りスタイルとその選び方。' },
+  { id: 'kikaiwari-kitaichi', title: '機械割と期待値の関係', summary: '計算機の数値の意味を理解する。機械割から1時間の期待収支を導く。' },
+  { id: 'risk-management', title: '資金管理と責任ある遊技', summary: '勝ち続けるための損切り・予算設定・依存にならないための心構え。' }
+];
+
+const articleBodies = {
+'how-slot-works': `スロット(パチスロ)は、コインを投入して3つのリール(回転する絵柄の輪)を回し、停止した絵柄の組み合わせでメダルを獲得するゲームです。一見ギャンブルに見えますが、実は**確率と数値で動く論理的なゲーム**であり、知識を持って打つほど勝率が上がる仕組みになっています。
+
+## 基本の流れ
+
+1. **メダルを投入**: 通常3枚を投入してレバーを叩く
+2. **リールが回転**: 左・中・右の3つのリールが回り始める
+3. **ストップボタンで停止**: 自分のタイミングで3つのリールを止める
+4. **絵柄に応じて配当**: 揃った絵柄に応じてメダルが払い出される
+
+リールの停止タイミングはユーザーが選べますが、内部的には「成立した役」が決まっており、それに応じて絵柄が引き寄せられて止まります。**内部抽選の結果がすべて**です。
+
+## 主な「役」の種類
+
+- **ボーナス**: BIG(約240枚)・REG(約96枚)など、大量のメダルを獲得できる役
+- **小役**: ぶどう(8枚)・チェリー(2枚)・ベル(数枚)など、小さな配当の役
+- **リプレイ**: メダルを使わずにもう1ゲーム回せる役
+
+ジャグラーシリーズのような「ノーマルAタイプ」は、出玉のほとんどがボーナスから生まれます。
+
+## 「設定」という概念
+
+スロットには「設定1〜6」という6段階の出玉率設定があり、店側が台ごとにどれを使うかを選択しています。
+
+- **設定1**: 長期的に勝ちにくい(機械割97%程度)
+- **設定6**: 長期的に勝ちやすい(機械割105〜109%)
+
+つまり**同じ機種でも、設定によって勝ちやすさが大きく変わる**のがスロットの本質です。設定は店から公表されないため、打ち手は数値から推測することになります。
+
+## なぜジャグラーが入門向きなのか
+
+- **シンプル**: 押し順や演出を覚える必要がない
+- **完全告知**: ボーナスはGOGO!ランプの点灯で必ずわかる
+- **設定差が比較的わかりやすい**: ボーナスと小役の確率だけで推測可能
+- **長く遊べる**: AT機のような短時間勝負ではない
+
+スロットを始めるなら、まずジャグラーで「設定推測の基本」を身につけることを強く推奨します。`,
+
+'a-type-vs-at': `スロットの機種は大きく分けて2つの系統に分類できます。「ノーマルAタイプ」と「AT機」です。両者は出玉の作り方が根本的に異なるため、立ち回りも勝ち方も別物です。
+
+## ノーマルAタイプ
+
+**ボーナスのみで出玉を増やすシンプルな機種**です。ジャグラーシリーズが代表例で、他にハナハナシリーズなどがあります。
+
+特徴:
+
+- ボーナス(BIG/REG)の獲得枚数で出玉が決まる
+- 通常時はボーナス当選を待つだけ
+- 演出はあるが「告知のための演出」のみで複雑な押し順なし
+- 出玉のブレが小さく、長時間遊べる
+
+機械割は概ね97〜109%の範囲。**ジャグラーは完全告知タイプ**で、ボーナス成立を見逃すリスクがゼロ。初心者にとって安心して打てる構造です。
+
+## AT機 (ART機・スマスロを含む)
+
+**AT(アシストタイム)中の押し順正解で大量出玉を狙う機種**です。バジリスク・北斗の拳・スマスロ系など膨大な種類があります。
+
+特徴:
+
+- 通常時はAT突入を狙う
+- AT中は押し順を正解することで小役が揃い続ける
+- 出玉のブレが大きい(短時間で+3000枚も -2000枚もあり得る)
+- 演出・押し順・天井システムが複雑
+
+機械割は95〜120%超まで幅広い。
+
+## 比較表
+
+| 項目 | ノーマルAタイプ | AT機 |
+|---|---|---|
+| 代表機種 | ジャグラー、ハナハナ | バジリスク、スマスロ全般 |
+| 出玉の源 | ボーナス | AT中の押し順正解 |
+| 演出 | 完全告知のみ | 多彩・派手 |
+| 出玉ブレ | 小さい | 大きい |
+| 1日の収支振れ幅 | ±数千枚 | ±1万枚以上もあり |
+| 学習コスト | 低い | 高い |
+| 初心者向け | ◎ | △ |
+
+## なぜ初心者にAタイプを薦めるか
+
+1. **ルールが単純**: 各機種のシステムを覚える必要がほぼない
+2. **損失が読みやすい**: 出玉のブレが小さく、1日の負け額が予想しやすい
+3. **設定推測が学びやすい**: ボーナスと小役の確率だけで判断するため、データの読み方が身につく
+
+スロットで安定して勝つには「設定推測」が必須です。まずジャグラーで設定推測の基礎を身につけ、それからAT機にステップアップするのが、長期的には最も近道になります。`,
+
+'what-is-settei': `スロット、特にジャグラーのようなノーマルAタイプにおいて、勝つために最も重要なのは**「設定」**を見極めることです。
+
+## 設定とは何か?
+
+各台には設定1〜6の6段階の出玉率が設定されており、店側がリセット時に選択します。設定6が最も出玉率が高く(=甘く)、設定1が最も低く(=辛い)なります。
+
+例えばマイジャグラー5なら、設定1は機械割97.0%、設定6は109.4%。**同じ機種なのに、設定だけで勝率が天と地ほど違う**のがスロットの本質です。
+
+## なぜ「推測」なのか
+
+店は設定を公表しません。打ち手は、実際にプレイしながらボーナス回数や小役の出現確率を数え、それが理論上どの設定に近いかを推測することになります。
+
+例えば設定6のぶどう確率は約1/5.66、設定1は約1/5.90。たった0.24の差ですが、5,000G観測すれば設定6なら約883個、設定1なら約847個と、明確な差が現れます。
+
+## 設定推測の3つの柱
+
+1. **ボーナス合算確率**: BIGとREGを足した出現率
+2. **子役確率**: ぶどうや単独REGの出現率
+3. **BR比率**: BIGとREGの比率
+
+サンプルが多くなるほど信頼度が高まります。1,000Gでは参考程度、5,000G以上で精度が出始め、1万G以上でほぼ確定的になります。
+
+## 設定推測ができるとどう変わるか
+
+例えば1日1万円ずつ100日打った場合:
+
+- ノリ打ち(平均設定3): 100日 × -1,800円 = **-18万円**
+- 設定狙い(設定5以上のみ): 100日 × +5,500円 = **+55万円**
+
+差額は約73万円。これが「推測する/しない」の違いです。
+
+## 推測は完璧ではない
+
+ただし、設定推測は確実なものではありません。サンプル数が少ないとブレがあり、「設定6に見えた台が実は設定2」ということも起こります。
+
+そのため、設定推測の本質は「**確率的に高設定の可能性が高い台を選び続ける**」ことです。1日単位ではブレますが、1ヶ月、1年と続けることで、推測の正しさが収束していきます。
+
+本サイトの計算機タブは、この推測を効率的にサポートするためのものです。`,
+
+'jaguar-comparison': `ジャグラーシリーズには10種類以上のバリエーションがありますが、現在ホールでよく見る主力は次の4機種です。それぞれの特徴を理解して使い分けましょう。
+
+## 4機種の基本スペック
+
+| 機種 | 設定1機械割 | 設定6機械割 | 主力ボーナス | 設定差の出る項目 |
+|---|---|---|---|---|
+| マイジャグラー5 | 97.0% | 109.4% | BIG・REG均等 | ぶどう・単独REG・チェリー重複BIG |
+| アイムジャグラーEX | 97.0% | 105.5% | REG偏向(高設定) | ぶどう(設定6のみ)・単独REG |
+| ファンキージャグラー2 | 97.0% | 109.0% | BIG偏向 | ぶどう・単独REG・REG |
+| ゴーゴージャグラー3 | 98.4% | 107.8% | BIG偏向(低設定) | ぶどう・REG |
+
+## マイジャグラー5: 現行最強の機械割
+
+設定6機械割109.4%は、現行の6号機ジャグラーで最も高い数値。設定6が入った時の爆発力はシリーズ随一です。
+
+**特徴**:
+
+- 設定差が3つあり、推測精度が出やすい
+- 設定6のBR比率がほぼ1:1
+
+**狙い目**: 設定狙いに本気で挑む人向け。判別要素が多い分、計算機の効果が大きい機種。
+
+## アイムジャグラーEX: 入門の最適解
+
+全国に約2,600店舗の設置で、シリーズ中最も設置数が多い。
+
+**特徴**:
+
+- 設定5・6でREG確率が同じ(1/255)
+- ぶどう確率は設定1〜5まで共通、設定6のみ高い
+- 設定差が小さく判別が難しい(設定5と6の機械割差が2.2%)
+
+**狙い目**: ジャグラーを始めたい人の入門機。低設定でも極端には負けにくい。
+
+## ファンキージャグラー2: BIG偏向の爆発力
+
+BIG純増約240枚に対しREG純増約96枚という差を活かしたBIG先行スペック。
+
+**特徴**:
+
+- 設定6 BIG確率1/219.9はシリーズトップクラスの軽さ
+- ぶどう・単独REGの設定差が大きく、判別しやすい
+
+**狙い目**: 設定6が入る店なら最優先。爆発力が魅力。
+
+## ゴーゴージャグラー3: ボーナス軽い・粘れる
+
+設定1のボーナス合算確率が1/149.6と、ジャグラーシリーズの中で最軽量。
+
+**特徴**:
+
+- 完全後告知タイプ(GOGO!ランプは第3停止後のみ点灯)
+- 全設定でボーナスが軽く、低設定でも長く打てる
+- 設定差は小さめ
+- ぶどうとREGが主な判別材料
+
+**狙い目**: 設定推測が難しいため、店全体の傾向を見て狙う方が向いています。
+
+## 使い分けの指針
+
+- **設定が入る店で本気の設定狙い**: マイジャグラー5
+- **設定が入るかわからない店で長く遊ぶ**: アイムジャグラーEX
+- **特定日に高設定が入る店で爆発狙い**: ファンキージャグラー2
+- **店の傾向で設定6を引きたい・粘りたい**: ゴーゴージャグラー3`,
+
+'koyaku-counting': `設定推測の精度を上げるために必須の作業が「子役カウント」です。
+
+## なぜ子役を数えるのか
+
+ボーナスの確率は約1/130と「重い」ため、1日(8,000G)打ってもボーナス60〜70回程度しかサンプルが取れません。これでは設定推測のブレが大きく、設定3と設定5の区別すら難しいケースがあります。
+
+一方、ぶどうは約1/6で出るため、3,000Gで500個前後のサンプルが取れます。**ぶどうカウントは少ないG数で精度の高い設定推測を可能にします**。
+
+例えばマイジャグラー5なら:
+
+- 設定6 ぶどう確率: 1/5.66 → 3,000Gで約530個
+- 設定1 ぶどう確率: 1/5.90 → 3,000Gで約508個
+
+差はわずか22個ですが、サンプル数が多いほど統計的に意味を持ちます。
+
+## 何を数えるか(機種別)
+
+**マイジャグラー5**: ぶどう・単独REG・チェリー重複BIG
+**アイムジャグラーEX**: ぶどう・単独REG
+**ファンキージャグラー2**: ぶどう・単独REG
+**ゴーゴージャグラー3**: ぶどう
+
+## 数え方の道具
+
+スマホアプリの小役カウンターが多数あり、ボタンタップで数えられます。本サイトの計算機タブもこの役割を兼ねています(+1ボタン)。
+
+物理カウンター(「カチカチくん」「勝ち勝ちくん」など)は電池式で打ちながら片手で操作できます。慣れるとスマホより速いです。
+
+## 何G数えれば信頼できるか
+
+| ぶどう数 | 信頼度 | 解釈 |
+|---|---|---|
+| 100個未満 | 参考にならない | 数値はブレる |
+| 100〜300個 | 大まかな傾向のみ | 高設定/低設定の傾向 |
+| 300〜500個 | やや信頼できる | 設定1か6かは見える |
+| 500〜1000個 | かなり信頼できる | 設定2と4の区別もある程度 |
+| 1000個以上 | 高い信頼度 | ツールの結果に従ってOK |
+
+**目安: 3,000G(ぶどう約500個)でようやく判別精度が出始める**と覚えておきましょう。
+
+## 数えなくて良い状況
+
+- **明らかな低設定**: 1,000Gでぶどうが100個程度なら継続不要
+- **明らかな高設定確定演出**が出た場合
+- **時間がない**: 数時間しか打てない時はボーナス確率重視でOK
+- **店の状況が明確**: 全6営業など意図が読める場合
+
+## 失敗を防ぐコツ
+
+- ボーナス前後でリセットしない(継続カウントが大事)
+- 1G回す前に数える(後で追加すると忘れる)
+- 角チェリー成立時はチェリー重複BIG/REGの確認も忘れずに
+
+子役カウントは退屈な作業ですが、設定推測の精度を桁違いに上げる**最もコスパの高い努力**です。`,
+
+'tachimawari-basics': `スロットの「立ち回り」とは、いつ・どの台を打ち始めて、いつ・どこで止めるかの判断のことです。打ち始めの戦略は3つに分けられます。
+
+## 朝イチ立ち回り(設定狙い)
+
+開店直後から打ち始める立ち回り。最も期待値が高く、本気で勝ちたい人の主流スタイル。
+
+**メリット**:
+
+- 終日(8,000〜12,000G)打てるため、設定推測の精度が最も高い
+- 高設定をツモった時の収支インパクトが大きい
+
+**デメリット**:
+
+- 朝早くから並ぶ必要あり
+- 低設定を引いたら1日マイナス確定
+
+**ポイント**: 抽選日と取材日を狙う、店の傾向を事前に調査、ガックンチェックで設定変更を見抜く。
+
+## ハイエナ立ち回り(期待値判断)
+
+すでに誰かが打ち終わった台のデータを見て、期待値が残っている台を狙う立ち回り。**朝早く起きるのが苦手な人や、副業的に取り組みたい人に向いています**。
+
+**ポイント(ジャグラーの場合)**:
+
+- ボーナス合算が悪い(1/180以上)+ ぶどうが良い(1/5.7以下)→ 高設定の可能性
+- BIG先行で5,000G超えた台は撤退している場合も多く、引き継ぐ価値あり
+
+天井狙いができるAT機ではハイエナがメインの立ち回りですが、ジャグラーではあくまで補助的です。
+
+## ヤメ時の判断
+
+「いつ止めるか」は「いつ始めるか」と同じくらい重要です。
+
+### 1. 設定推測の結果
+
+計算機の推定設定分布を見て:
+
+- 設定1〜3が80% → **撤退**
+- 設定5・6が70% → **続行**
+- 設定3・4が60% → **2,000Gほど追加観察**
+
+### 2. 心理状態と資金
+
+- 疲れて判断力が落ちている
+- 当日の予算を超えそう
+- 負けが込んでムキになっている → これが最も危険な状態
+
+**「設定6でも1日10万円負けることがある」**のがスロットです。
+
+## 立ち回りの3原則
+
+1. **根拠を持って打つ**: 「なんとなく」は最大の敵
+2. **データを残す**: 1日ごとに収支を記録
+3. **ルールを守る**: 損切りライン・撤退条件を絶対に破らない`,
+
+'kikaiwari-kitaichi': `「機械割」と「期待値」は本サイトの計算機が表示する数値の意味そのものです。
+
+## 機械割とは
+
+機械割は「**長期的に打った時の出玉率**」を示す数値です。例えば機械割105%なら、長期的に投入したメダルの105%が戻ってくることを意味します。
+
+**機械割100%が損益分岐点**で、それ未満なら理論上負け、超えていれば勝てる、という単純な判定です。
+
+## 設定別の機械割(主要4機種)
+
+| 機種 | 設定1 | 設定2 | 設定3 | 設定4 | 設定5 | 設定6 |
+|---|---|---|---|---|---|---|
+| マイジャグラー5 | 97.0% | 98.0% | 99.5% | 102.8% | 105.3% | 109.4% |
+| アイムジャグラーEX | 97.0% | 98.0% | 99.5% | 101.1% | 103.3% | 105.5% |
+| ファンキージャグラー2 | 97.0% | 98.5% | 99.8% | 102.5% | 105.0% | 109.0% |
+| ゴーゴージャグラー3 | 98.4% | 99.4% | 100.6% | 102.8% | 105.1% | 107.8% |
+
+**勝てる設定の境目は機械割100%**。多くの機種で設定3〜4の間にこの境界があります。
+
+## 期待値(円換算)の計算
+
+ジャグラー1時間800G、3枚掛け、20円/枚の場合:
+
+- 機械割105%: +2,400円/時間
+- 機械割95%: -2,400円/時間
+
+**1日10時間打てば、機械割の差は±24,000円のインパクト**。
+
+本サイトでは「詳細設定(円換算)」で5枚交換店等の換金率も設定可能です。
+
+## 計算機の数値の解釈
+
+例: 「推定機械割 102.8% / 予測区間 99.5% 〜 109.4%」と表示された場合:
+
+- **102.8%**: 最も可能性の高い機械割
+- **予測区間 99.5% 〜 109.4%**: 真の機械割がこの範囲に90%の確率で入る
+- 予測区間が広い → サンプルが少ない、もう少し打って確認すべき
+- 予測区間が狭い → サンプルが十分、信頼度高い
+
+**重要**: 102.8%という数字はあくまで推定値です。予測区間こそが「不確実性」の表現です。
+
+## 短期と長期の違い(分散)
+
+機械割105%でも、1日単位では大負けすることがあります。これを「分散」と呼びます。
+
+長期で打ち続けることで分散が収束します。
+
+## 計算機の使い方の指針
+
+1. 観測したデータを入力
+2. 推定機械割と予測区間を確認
+3. 推定機械割が101%超 → 続行検討
+4. 推定機械割が99%未満 → 撤退検討
+5. 予測区間が広い時はもう少し打って情報を集める`,
+
+'risk-management': `スロットで長期的に勝ち続けるには、設定推測の技術と同じくらい「資金管理」と「自分のメンタル管理」が重要です。
+
+## なぜ資金管理が必要か
+
+スロットには「分散」があります。設定6でも1日5万円負けることがあり、設定狙いをしていても10連敗のような不運が起こります。
+
+**プロでも年間勝率は60〜70%程度**。残りの30〜40%は負ける日があります。
+
+## 1日の予算と上限
+
+スロットを始める前に、必ず以下を決めてください:
+
+- **1日の予算**: その日に使える金額の上限
+- **1日の損切りライン**: 「ここまで負けたら撤退」の金額
+- **1日の利益確定ライン**: 「ここまで勝ったら撤退」の金額(任意)
+
+ジャグラーの目安: 予算5万円、損切り-3万円。
+
+**重要**: 損切りラインに到達したら「あと1台」「あと10K」を絶対にしないこと。
+
+## 月単位の資金管理
+
+**月の投資資金は「全額失っても生活に影響しない金額」に設定すること**。家賃や生活費を切り崩してスロットを打つのは、資金管理ではなくギャンブル依存の入り口です。
+
+## 心理状態の管理
+
+### 連敗時の心理
+
+3連敗、5連敗が続くと「今日こそ取り返したい」気持ちが強くなります。これは**最も危険な状態**です。
+
+対策: 1週間ホールに行かない、過去の月間収支を見直す、計算機を使った客観的な判断を徹底。
+
+### 「取り戻したい」感情
+
+最も多い失敗パターン。**取り戻すのではなく、次の機会に正しい立ち回りで稼ぐ**。これが鉄則です。
+
+## 依存にならないために
+
+スロットには依存性があります。以下のサインに気づいたら立ち止まってください。
+
+**警告サイン**:
+
+- 借金してでもスロットを打ちたい
+- 仕事や家庭をスロットより優先できない
+- スロットで失った金額を、他の人に隠している
+- 「あと1回だけ」を毎日繰り返している
+- スロットを打っていない時もスロットのことばかり考えている
+
+これらに当てはまる場合、すでにギャンブル依存の初期段階に入っている可能性があります。
+
+## 相談先
+
+依存が気になる方、または家族・身近な人がギャンブルで困っている方は以下に相談してください。
+
+- **公益社団法人 ギャンブル依存症問題を考える会** (https://gamblingaddiction.jp/)
+- **GAミーティング(ギャンブラーズ・アノニマス)** (https://www.gajapan.jp/)
+- **各都道府県の精神保健福祉センター** (公的相談窓口・無料)
+- **ギャンブル等依存症 相談ダイヤル(厚生労働省)**: 0570-061-005
+
+**早期発見・早期相談が回復への近道です**。依存は「弱さ」ではなく「病気」であり、適切な支援で回復できます。
+
+## まとめ
+
+- 1日・月単位の予算と上限を必ず決める
+- 損切りラインを絶対に破らない
+- 連敗時はクールダウン、大勝時は慢心しない
+- 「取り戻したい」感情と戦う技術を身につける
+- 依存のサインを自覚し、必要なら相談する
+
+スロットは「楽しみ」であって「収入源」ではありません。趣味として節度を持って楽しむのが、最も賢明な向き合い方です。`
+};
+
+let kbTab = 'glossary', kbCat = 'all', kbSearchStr = '';
+function kbSetTab(t) {
+  kbTab = t;
+  document.querySelectorAll('.kb-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
+  document.getElementById('catFilter').style.display = t === 'glossary' ? 'flex' : 'none';
+  kbRender();
+}
+function kbSetCat(c) {
+  kbCat = c;
+  document.querySelectorAll('.cat-chip').forEach(x => x.classList.toggle('active', x.dataset.cat === c));
+  kbRender();
+}
+function kbSearch() {
+  kbSearchStr = document.getElementById('searchBox').value.toLowerCase();
+  kbRender();
+}
+function escapeHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function inlineMd(t) { return escapeHtml(t).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>'); }
+function md2html(md) {
+  return md.split(/\n\n+/).map(b => {
+    b = b.trim(); if (!b) return '';
+    if (b.startsWith('### ')) return '<h4>' + inlineMd(b.slice(4)) + '</h4>';
+    if (b.startsWith('## ')) return '<h3>' + inlineMd(b.slice(3)) + '</h3>';
+    if (b.startsWith('# ')) return '<h3>' + inlineMd(b.slice(2)) + '</h3>';
+    const ls = b.split('\n');
+    if (ls.length >= 2 && ls[0].includes('|') && ls[1].includes('---')) {
+      const h = ls[0].split('|').filter(c => c.trim()).map(c => '<th>' + inlineMd(c.trim()) + '</th>').join('');
+      const r = ls.slice(2).filter(l => l.includes('|')).map(l => '<tr>' + l.split('|').filter(c => c.trim()).map(c => '<td>' + inlineMd(c.trim()) + '</td>').join('') + '</tr>').join('');
+      return '<div class="table-wrap"><table><thead><tr>' + h + '</tr></thead><tbody>' + r + '</tbody></table></div>';
+    }
+    if (/^\d+\. /.test(ls[0])) return '<ol>' + ls.map(l => '<li>' + inlineMd(l.replace(/^\d+\.\s+/, '')) + '</li>').join('') + '</ol>';
+    if (ls[0].startsWith('- ')) return '<ul>' + ls.map(l => '<li>' + inlineMd(l.replace(/^-\s+/, '')) + '</li>').join('') + '</ul>';
+    return '<p>' + inlineMd(b.replace(/\n/g, ' ')) + '</p>';
+  }).join('');
+}
+function kbRender() {
+  const c = document.getElementById('listContainer');
+  if (kbTab === 'glossary') {
+    let f = terms;
+    if (kbCat !== 'all') f = f.filter(t => t.cat === kbCat);
+    if (kbSearchStr) f = f.filter(t => t.name.toLowerCase().includes(kbSearchStr) || t.def.toLowerCase().includes(kbSearchStr));
+    if (f.length === 0) { c.innerHTML = '<div class="empty-state">該当する用語がありません</div>'; return; }
+    c.innerHTML = f.map(t => '<div class="term-row" onclick="kbShowTerm(\'' + t.id + '\')"><p class="term-name">' + t.name + '</p><p class="term-def">' + t.def + '</p></div>').join('');
+  } else {
+    let f = articles;
+    if (kbSearchStr) f = f.filter(a => a.title.toLowerCase().includes(kbSearchStr) || a.summary.toLowerCase().includes(kbSearchStr) || (articleBodies[a.id] && articleBodies[a.id].toLowerCase().includes(kbSearchStr)));
+    if (f.length === 0) { c.innerHTML = '<div class="empty-state">該当する記事がありません</div>'; return; }
+    c.innerHTML = '<div style="padding: 14px;">' + f.map(a => '<div class="article-card" onclick="kbShowArticle(\'' + a.id + '\')"><p class="article-card-title">' + a.title + '</p><p class="article-card-summary">' + a.summary + '</p><p class="article-card-meta">約' + (articleBodies[a.id] ? articleBodies[a.id].length : 0) + '字</p></div>').join('') + '</div>';
+  }
+}
+function kbShowTerm(id) {
+  const t = terms.find(x => x.id === id); if (!t) return;
+  const cl = { bonus: 'ボーナス・小役', estimation: '設定推測', tachimawari: '立ち回り', kishu: '機種・基礎' }[t.cat];
+  const r = terms.filter(x => x.cat === t.cat && x.id !== t.id).slice(0, 4);
+  document.getElementById('kb-listView').style.display = 'none';
+  document.getElementById('kb-detailView').style.display = 'block';
+  document.getElementById('detailContent').innerHTML = '<p style="font-size: 11px; color: var(--c-text-tertiary); margin: 0 0 4px;">' + cl + '</p><h2 class="detail-title">' + t.name + '</h2><div class="detail-body"><p>' + t.def + '</p></div><div class="related-terms"><p class="related-label">関連する用語</p>' + r.map(x => '<span class="related-link" onclick="kbShowTerm(\'' + x.id + '\')">' + x.name + '</span>').join('') + '</div>';
+}
+function kbShowArticle(id) {
+  const a = articles.find(x => x.id === id); if (!a) return;
+  document.getElementById('kb-listView').style.display = 'none';
+  document.getElementById('kb-detailView').style.display = 'block';
+  const bh = articleBodies[id] ? md2html(articleBodies[id]) : '<p style="color: var(--c-text-tertiary);">本文未執筆</p>';
+  document.getElementById('detailContent').innerHTML = '<p style="font-size: 11px; color: var(--c-text-tertiary); margin: 0 0 4px;">基礎知識</p><h2 class="detail-title">' + a.title + '</h2><p style="font-size: 12px; color: var(--c-text-secondary); margin: 0 0 16px;">' + a.summary + '</p><div class="detail-body">' + bh + '</div>';
+}
+function kbBackToList() {
+  document.getElementById('kb-detailView').style.display = 'none';
+  document.getElementById('kb-listView').style.display = 'block';
+}
+
+// Initialize
+selectMachine('myJugV');
+kbRender();
+</script>
+</body>
+</html>
