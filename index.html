@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="description" content="ジャグラー4機種対応のスロット期待値計算機・知識ベース。設定推測・機械割・期待値をBayes統計で算出。">
+<meta name="description" content="スロットアカデミー(スロアカ)— ジャグラー設定推測ツールと体系的な知識を、初心者から上級者まで4階級で学べるWebアプリ。">
 <meta name="theme-color" content="#fef9f3">
-<title>スロット相棒 — ジャグラー期待値計算機</title>
+<title>スロアカ — スロットアカデミー</title>
 <style>
   /* ===== Reset & Base ===== */
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -222,6 +222,93 @@
   }
   #toast.show { opacity: 1; }
   
+  /* ===== Grade Selector Modal ===== */
+  #gradeOverlay {
+    position: fixed; inset: 0;
+    background: rgba(20, 15, 5, 0.55);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 1rem;
+  }
+  #gradeOverlay.show { display: flex; }
+  #gradeModal {
+    background: var(--c-bg-primary);
+    border-radius: var(--r-lg);
+    border: 0.5px solid var(--c-border-tertiary);
+    padding: 1.5rem 1.25rem;
+    max-width: 360px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 12px 40px rgba(40, 25, 10, 0.25);
+  }
+  #gradeModal h3 {
+    font-size: 16px; font-weight: 500;
+    margin: 0 0 4px;
+    color: var(--c-text-primary);
+  }
+  #gradeModal .modal-sub {
+    font-size: 12px;
+    color: var(--c-text-secondary);
+    margin: 0 0 16px;
+    line-height: 1.6;
+  }
+  .grade-option {
+    display: block; width: 100%;
+    text-align: left;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    border: 0.5px solid var(--c-border-tertiary);
+    border-radius: var(--r-md);
+    background: transparent;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s, border-color 0.15s;
+    touch-action: manipulation;
+  }
+  .grade-option:hover, .grade-option:focus {
+    background: var(--c-bg-secondary);
+    border-color: var(--c-border-secondary);
+  }
+  .grade-option.selected {
+    background: var(--c-bg-info);
+    border-color: var(--c-border-info);
+  }
+  .grade-option-emoji {
+    font-size: 22px;
+    margin-right: 10px;
+    vertical-align: middle;
+  }
+  .grade-option-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--c-text-primary);
+    vertical-align: middle;
+  }
+  .grade-option-desc {
+    font-size: 11px;
+    color: var(--c-text-secondary);
+    margin: 4px 0 0 32px;
+    line-height: 1.5;
+  }
+  .modal-close {
+    width: 100%;
+    margin-top: 8px;
+    padding: 10px;
+    background: transparent;
+    border: 0.5px solid var(--c-border-tertiary);
+    border-radius: var(--r-md);
+    color: var(--c-text-secondary);
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  
   /* ===== Knowledge Base UI ===== */
   .kb-tab-btn {
     flex: 1; padding: 8px 12px; font-size: 13px;
@@ -333,11 +420,38 @@
 </style>
 </head>
 <body>
+
+<!-- 階級選択モーダル -->
+<div id="gradeOverlay" role="dialog" aria-labelledby="gradeModalTitle" aria-modal="true">
+<div id="gradeModal">
+<h3 id="gradeModalTitle">あなたの階級を選んでください</h3>
+<p class="modal-sub">スロアカでは4段階の階級に応じて、表示する情報の深さが変わります。今のレベルに合わせて選んでください(後でいつでも変更できます)。</p>
+<button class="grade-option" data-grade="elementary" onclick="setGrade('elementary')">
+<span class="grade-option-emoji">🎒</span><span class="grade-option-name">小学校 / 初心者</span>
+<p class="grade-option-desc">スロットを始めたばかり。基本的な情報だけ見たい。</p>
+</button>
+<button class="grade-option" data-grade="middle" onclick="setGrade('middle')">
+<span class="grade-option-emoji">📕</span><span class="grade-option-name">中学校 / 中級者</span>
+<p class="grade-option-desc">設定推測の基本は理解している。標準的な機能を使いたい。</p>
+</button>
+<button class="grade-option" data-grade="high" onclick="setGrade('high')">
+<span class="grade-option-emoji">🎓</span><span class="grade-option-name">高校 / 上級者</span>
+<p class="grade-option-desc">専門的な指標(予測区間・期待値分散など)を活用したい。</p>
+</button>
+<button class="grade-option" data-grade="university" onclick="setGrade('university')">
+<span class="grade-option-emoji">🎖️</span><span class="grade-option-name">大学 / プロ級</span>
+<p class="grade-option-desc">すべての情報・カスタマイズを使いこなしたい専業者向け。</p>
+</button>
+<button class="modal-close" onclick="closeGradeSelector()">閉じる</button>
+</div>
+</div>
+
 <div class="app-frame">
 <div id="toast">コピーしました</div>
 
-<div style="padding: 0.75rem 1.25rem 0.5rem; border-bottom: 0.5px solid var(--c-border-tertiary);">
-<p style="font-size: 11px; color: var(--c-text-tertiary); margin: 0; letter-spacing: 0.05em;">スロット相棒</p>
+<div style="padding: 0.75rem 1.25rem 0.5rem; border-bottom: 0.5px solid var(--c-border-tertiary); display: flex; justify-content: space-between; align-items: center;">
+<p style="font-size: 11px; color: var(--c-text-tertiary); margin: 0; letter-spacing: 0.05em;">スロアカ <span style="font-size: 9px; opacity: 0.7;">/ スロットアカデミー</span></p>
+<button id="gradeBadge" onclick="openGradeSelector()" style="background: var(--c-bg-info); color: var(--c-text-info); border: 0.5px solid var(--c-border-info); border-radius: 999px; padding: 4px 10px; font-size: 11px; font-family: inherit; cursor: pointer;">階級: --</button>
 </div>
 <div style="display: flex; border-bottom: 0.5px solid var(--c-border-tertiary);">
 <button class="app-tab active" data-page="calculator" onclick="showPage('calculator')">期待値計算機</button>
@@ -481,12 +595,103 @@
 </div>
 
 <p class="site-footer">
-スロット相棒 v1.0 / プロトタイプ<br>
+スロアカ(スロットアカデミー) v0.2 / β版<br>
 本ツールは設定推測の参考情報を提供するものであり、出玉を保証するものではありません。<br>
 依存が気になる方は <a href="https://gamblingaddiction.jp/" target="_blank" rel="noopener">ギャンブル依存症問題を考える会</a> へ
 </p>
 
 <script>
+/* ===== Grade System ===== */
+const GRADES = {
+  elementary: { name: '小学校', emoji: '🎒', short: '初級' },
+  middle:     { name: '中学校', emoji: '📕', short: '中級' },
+  high:       { name: '高校',   emoji: '🎓', short: '上級' },
+  university: { name: '大学',   emoji: '🎖️', short: 'プロ' }
+};
+let currentGrade = null;
+
+function getStoredGrade() {
+  try { return localStorage.getItem('slot-aca-grade'); }
+  catch(e) { return null; }
+}
+function storeGrade(g) {
+  try { localStorage.setItem('slot-aca-grade', g); }
+  catch(e) { /* localStorage 不可環境では揮発でOK */ }
+}
+function setGrade(g) {
+  if (!GRADES[g]) return;
+  currentGrade = g;
+  storeGrade(g);
+  updateGradeBadge();
+  applyGradeToCalculator();
+  closeGradeSelector();
+  showToast(GRADES[g].emoji + ' ' + GRADES[g].name + 'に進級しました');
+}
+function updateGradeBadge() {
+  const badge = document.getElementById('gradeBadge');
+  if (!badge) return;
+  if (currentGrade && GRADES[currentGrade]) {
+    const g = GRADES[currentGrade];
+    badge.textContent = g.emoji + ' ' + g.short;
+  } else {
+    badge.textContent = '階級を選ぶ';
+  }
+}
+function applyGradeToCalculator() {
+  // 階級ごとの表示制御。各要素の表示/非表示を「推奨表示」として制御。
+  // ロックではなく、初期表示を階級に合わせる(緩い差別化)
+  const isElem = currentGrade === 'elementary';
+  const isUni = currentGrade === 'university';
+  
+  // 小学校: 詳細指標の入力欄を初期非表示(単独REG・チェリー重複)
+  // 中学校以上: 機種固有の inputs に従う(これは selectMachine で制御済)
+  // ただし、小学校では強制的に追加項目を隠す
+  const fieldSoloREG = document.getElementById('field-soloREG');
+  const fieldCherryBIG = document.getElementById('field-cherryBIG');
+  if (isElem && fieldSoloREG) fieldSoloREG.style.display = 'none';
+  if (isElem && fieldCherryBIG) fieldCherryBIG.style.display = 'none';
+  
+  // 小学校: 予測区間と計算根拠は非表示
+  const ciEl = document.getElementById('payoutCI');
+  const calcDetails = document.querySelector('.calc-details');
+  if (ciEl) ciEl.style.display = isElem ? 'none' : '';
+  if (calcDetails) calcDetails.style.display = isElem ? 'none' : '';
+  
+  // 小学校: データ出力(コピー機能)は非表示
+  const exportDetails = document.querySelector('.export-details');
+  if (exportDetails) exportDetails.style.display = isElem ? 'none' : '';
+  
+  // 小学校: 詳細設定(換金率・打ちペース)も非表示(等価固定で十分)
+  const settingsDetails = document.querySelector('.settings-details');
+  if (settingsDetails) settingsDetails.style.display = isElem ? 'none' : '';
+  
+  // 大学: 計算根拠を初期展開(プロは詳細を常に見たい)
+  if (calcDetails && isUni) {
+    calcDetails.setAttribute('open', '');
+  } else if (calcDetails) {
+    calcDetails.removeAttribute('open');
+  }
+}
+function openGradeSelector() {
+  // 現在の選択状態を反映
+  document.querySelectorAll('.grade-option').forEach(b => {
+    b.classList.toggle('selected', b.dataset.grade === currentGrade);
+  });
+  document.getElementById('gradeOverlay').classList.add('show');
+}
+function closeGradeSelector() {
+  document.getElementById('gradeOverlay').classList.remove('show');
+}
+// オーバーレイクリックで閉じる(モーダル本体クリックは伝播しない)
+document.addEventListener('DOMContentLoaded', () => {
+  const overlay = document.getElementById('gradeOverlay');
+  if (overlay) {
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) closeGradeSelector();
+    });
+  }
+});
+
 /* ===== App tabs ===== */
 function showPage(p) {
   document.querySelectorAll('.app-page').forEach(x => x.style.display = 'none');
@@ -596,6 +801,8 @@ function selectMachine(id) {
   ['startBig','big','startReg','reg','grape','soloREG','cherryBIG'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '0';
   });
+  // 階級が決まっていれば、その制御を再適用(機種データ表示の上に重ねる)
+  if (currentGrade) applyGradeToCalculator();
   update();
 }
 function setMode(m) {
@@ -815,7 +1022,7 @@ function update() {
   lines.push('設定確率分布:');
   for (let i = 0; i < 6; i++) lines.push('  設定' + (i+1) + ': ' + Math.round(probs[i]*100) + '%');
   lines.push('');
-  lines.push('スロット相棒');
+  lines.push('スロアカ');
   document.getElementById('snapshotText').value = lines.join('\n');
 }
 
@@ -1388,8 +1595,20 @@ function kbBackToList() {
 }
 
 // Initialize
+const storedGrade = getStoredGrade();
+if (storedGrade && GRADES[storedGrade]) {
+  currentGrade = storedGrade;
+}
+updateGradeBadge();
 selectMachine('myJugV');
+applyGradeToCalculator();
 kbRender();
+
+// 階級未設定なら、初回起動として階級選択モーダルを表示
+if (!currentGrade) {
+  // 少し遅延させて、ページ描画後にモーダルを出す
+  setTimeout(openGradeSelector, 300);
+}
 </script>
 </body>
 </html>
