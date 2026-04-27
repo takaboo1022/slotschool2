@@ -367,19 +367,23 @@
 </div>
 <div style="padding: 1.25rem;">
 <details class="settings-details" style="margin: 0 0 16px;">
-<summary>詳細設定(円換算)</summary>
+<summary>詳細設定(換金率・打ちペース)</summary>
 <div style="margin-top: 10px;">
-<p style="font-size: 11px; color: var(--c-text-secondary); margin: 0 0 6px;">プリセット</p>
+<p style="font-size: 11px; color: var(--c-text-secondary); margin: 0 0 6px;">換金率プリセット</p>
 <div style="display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap;">
 <button class="preset-btn active" data-preset="equiv" onclick="setPreset('equiv')">等価交換(20円)</button>
 <button class="preset-btn" data-preset="five" onclick="setPreset('five')">5枚交換(16円)</button>
 <button class="preset-btn" data-preset="six" onclick="setPreset('six')">6枚交換(13.3円)</button>
 </div>
 <div class="field-grid" style="gap: 8px;">
-<div><label style="display: block; font-size: 11px; color: var(--c-text-secondary); margin-bottom: 4px;">1Gあたり掛け枚数</label><input id="bet" type="number" inputmode="numeric" value="3"/></div>
-<div><label style="display: block; font-size: 11px; color: var(--c-text-secondary); margin-bottom: 4px;">1枚あたり貸し金(円)</label><input id="yenPerCoin" type="number" inputmode="numeric" value="20"/></div>
-<div><label style="display: block; font-size: 11px; color: var(--c-text-secondary); margin-bottom: 4px;">1時間あたりG数</label><input id="hourG" type="number" inputmode="numeric" value="800"/></div>
+<div><label style="display: block; font-size: 11px; color: var(--c-text-secondary); margin-bottom: 4px;">メダル1枚の換金額(円)</label><input id="yenPerCoin" type="number" inputmode="decimal" value="20"/></div>
+<div><label style="display: block; font-size: 11px; color: var(--c-text-secondary); margin-bottom: 4px;">打ちペース(G/時)</label><input id="hourG" type="number" inputmode="numeric" value="800"/></div>
 </div>
+<p style="font-size: 10px; color: var(--c-text-tertiary); margin: 10px 0 0; line-height: 1.6;">
+※ 表示される機械割は「<strong style="color: var(--c-text-secondary);">チェリー狙いを完璧に実行した時</strong>」の理論値(解析値)です。<br>
+順押しのみの場合は約 0.5〜1% 低くなります。<br>
+ボーナス成立後に1枚掛けでぶどうを抜く場合(<a href="javascript:jumpToTerm('budou-nuki')" style="color: var(--c-text-info);">ぶどう抜き</a>)は約 1% 高くなります。
+</p>
 </div>
 </details>
 <p style="font-size: 12px; color: var(--c-text-secondary); margin: 0 0 8px; font-weight: 500;">観測範囲(ゲーム数)</p>
@@ -503,6 +507,7 @@ function showToast(msg) {
 const machines = {
   myJugV: {
     name: "マイジャグラー5",
+    bet: 3,
     BIG: [273.1,270.8,266.4,254.0,240.1,229.1],
     REG: [409.6,385.5,336.1,290.0,268.6,229.1],
     soloBIG: [409.60,407.06,399.61,378.82,354.25,337.81],
@@ -517,6 +522,7 @@ const machines = {
   },
   iJugEX: {
     name: "アイムジャグラーEX",
+    bet: 3,
     BIG: [273.1,269.7,269.7,259.0,259.0,255.0],
     REG: [439.8,399.6,331.0,315.1,255.0,255.0],
     soloBIG: null,
@@ -531,6 +537,7 @@ const machines = {
   },
   funky2: {
     name: "ファンキージャグラー2",
+    bet: 3,
     BIG: [266.4,259.0,256.0,249.2,240.1,219.9],
     REG: [439.8,407.1,366.1,322.8,299.3,262.1],
     soloBIG: null,
@@ -545,6 +552,7 @@ const machines = {
   },
   gogo3: {
     name: "ゴーゴージャグラー3",
+    bet: 3,
     BIG: [259.0,258.0,257.0,254.0,247.3,234.9],
     REG: [354.2,332.7,306.2,268.6,247.3,234.9],
     soloBIG: null, soloREG: null, cherryBIG: null, cherryREG: null,
@@ -769,7 +777,7 @@ function update() {
   const [lo, hi] = ci90(probs, m.payout);
   document.getElementById('payoutCI').textContent = '予測区間: ' + lo.toFixed(1) + '% 〜 ' + hi.toFixed(1) + '% (90%)';
   
-  const bet = getF('bet') || 3, ypc = getF('yenPerCoin') || 20, hG = getF('hourG') || 800;
+  const bet = m.bet || 3, ypc = getF('yenPerCoin') || 20, hG = getF('hourG') || 800;
   const hourlyYen = Math.round((payout - 100) / 100 * hG * bet * ypc);
   const sign = hourlyYen >= 0 ? '+' : '−';
   document.getElementById('hourlyValue').textContent = sign + Math.abs(hourlyYen).toLocaleString() + '円';
@@ -827,7 +835,7 @@ function copySnapshot() {
   }
 }
 
-['startG','nowG','startBig','big','startReg','reg','grape','soloREG','cherryBIG','bet','yenPerCoin','hourG'].forEach(id => {
+['startG','nowG','startBig','big','startReg','reg','grape','soloREG','cherryBIG','yenPerCoin','hourG'].forEach(id => {
   const el = document.getElementById(id);
   if (el) el.addEventListener('input', update);
 });
