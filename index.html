@@ -396,11 +396,87 @@
     border-radius: var(--r-md);
     margin-bottom: 10px;
     cursor: pointer;
+    position: relative;
   }
   .article-card:hover { background: var(--c-bg-secondary); }
   .article-card-title { font-size: 14px; font-weight: 500; color: var(--c-text-primary); margin: 0 0 4px; }
   .article-card-summary { font-size: 12px; color: var(--c-text-secondary); margin: 0 0 6px; line-height: 1.5; }
   .article-card-meta { font-size: 10px; color: var(--c-text-tertiary); margin: 0; }
+  /* 既読状態 */
+  .read-item { opacity: 0.55; }
+  .read-item .article-card-title::before,
+  .read-item .term-name::before,
+  .read-item h3::before {
+    content: "✓ ";
+    color: var(--c-text-tertiary);
+    font-size: 11px;
+    font-weight: normal;
+  }
+  /* 新着バッジ */
+  .news-badge-new {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #d32f2f;
+    color: white;
+    font-size: 9px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+  }
+  /* 既読/未読トグルボタン */
+  .read-toggle-btn {
+    display: inline-block;
+    padding: 4px 10px;
+    margin: 0 0 14px;
+    background: var(--c-bg-secondary);
+    border: 0.5px solid var(--c-border-tertiary);
+    border-radius: 12px;
+    font-size: 11px;
+    color: var(--c-text-secondary);
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .read-toggle-btn:hover {
+    background: var(--c-bg-info);
+    border-color: var(--c-border-info);
+    color: var(--c-text-info);
+  }
+  /* 関連記事セクション */
+  .related-articles {
+    margin-top: 24px;
+    padding: 12px 14px;
+    background: var(--c-bg-secondary);
+    border-radius: var(--r-md);
+    border: 0.5px solid var(--c-border-tertiary);
+  }
+  .related-articles-label {
+    font-size: 11px;
+    color: var(--c-text-tertiary);
+    margin: 0 0 8px;
+    letter-spacing: 0.05em;
+  }
+  .related-article-link {
+    display: block;
+    padding: 8px 10px;
+    margin-bottom: 4px;
+    background: var(--c-bg-primary);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--c-text-primary);
+    line-height: 1.4;
+    transition: background 0.15s;
+  }
+  .related-article-link:hover { background: var(--c-bg-info); }
+  .related-article-link:last-child { margin-bottom: 0; }
+  .related-article-link-meta {
+    font-size: 10px;
+    color: var(--c-text-tertiary);
+    margin-left: 4px;
+  }
   
   .detail-back {
     font-size: 13px; color: var(--c-text-info);
@@ -646,7 +722,7 @@
 <div id="page-knowledge" class="app-page" style="display:none;">
 <div id="kb-listView">
 <div style="padding: 1rem 1.25rem; border-bottom: 0.5px solid var(--c-border-tertiary);">
-<input id="searchBox" type="text" placeholder="用語・記事を検索…" oninput="kbSearch()"/>
+<input id="searchBox" type="text" placeholder="検索…(スペース区切りでAND検索)" oninput="kbSearch()"/>
 </div>
 <div style="padding: 1rem 1.25rem; border-bottom: 0.5px solid var(--c-border-tertiary);">
 <div style="display: flex; gap: 8px; margin-bottom: 12px;">
@@ -689,7 +765,7 @@
 <p style="margin: 0; font-size: 11px; opacity: 0.9;">業界ニュース・特集記事・スロアカからのお知らせ</p>
 </div>
 <div style="padding: 1rem 1.25rem; border-bottom: 0.5px solid var(--c-border-tertiary);">
-<input id="newsSearchBox" type="text" placeholder="ニュースを検索…" oninput="newsSearch()" style="width: 100%; padding: 8px 12px; border: 0.5px solid var(--c-border-tertiary); border-radius: 8px; font-family: inherit; font-size: 14px;"/>
+<input id="newsSearchBox" type="text" placeholder="ニュースを検索…(スペース区切りでAND検索)" oninput="newsSearch()" style="width: 100%; padding: 8px 12px; border: 0.5px solid var(--c-border-tertiary); border-radius: 8px; font-family: inherit; font-size: 14px;"/>
 </div>
 <div style="padding: 0.75rem 1.25rem; border-bottom: 0.5px solid var(--c-border-tertiary);">
 <div style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px;">
@@ -8940,7 +9016,11 @@ const newsArticles = [
   { id: 'news-beginner-guide', cat: 'feature', date: '2026-03-25', title: '【特集】学生のためのパチスロ攻略入門', summary: 'スロアカの階級別カリキュラムに沿った、初心者から上級者までの学習ロードマップ。' },
   // お知らせカテゴリ(2件)
   { id: 'news-welcome', cat: 'notice', date: '2026-04-28', title: 'スロアカへようこそ', summary: 'スロットアカデミー(スロアカ)の運営方針・各機能の使い方・今後の開発計画について。' },
-  { id: 'news-textbook-54', cat: 'notice', date: '2026-04-28', title: '教科書54記事完成のお知らせ', summary: 'AT機10機種の天井狙い・設定推測・ヤメ時詳細・ゾーン狙いの4本柱+総合学習7記事の充実をお知らせ。' }
+  { id: 'news-textbook-54', cat: 'notice', date: '2026-04-28', title: '教科書54記事完成のお知らせ', summary: 'AT機10機種の天井狙い・設定推測・ヤメ時詳細・ゾーン狙いの4本柱+総合学習7記事の充実をお知らせ。' },
+  { id: 'news-juggler-history', cat: 'feature', date: '2026-04-22', title: '【特集】ジャグラー攻略の歴史', summary: '1996年初代から30年・ペカ告知の発明・5号機隆盛・6号機ジャグラーの今をシリーズ別に総まとめ。' },
+  { id: 'news-complete-rank', cat: 'feature', date: '2026-04-18', title: '【特集】完走機種ランキング考察', summary: 'コンプリート機能19000枚到達しやすい機種を考察。一撃性能・継続性・ループ機構の3軸で分析。' },
+  { id: 'news-hall-selection', cat: 'feature', date: '2026-04-12', title: '【特集】ホール選びの極意', summary: '設定が入る店の見抜き方・癖読み・据え置き派/設定変更派の判別・客層チェックの5つの観点で実践知識を解説。' },
+  { id: 'news-feature-release', cat: 'notice', date: '2026-04-28', title: '校内新聞機能リリースのお知らせ', summary: 'スロアカに新機能「校内新聞」が追加。業界ニュース・特集記事・お知らせを定期配信。教科書との連携リンク機能も実装。' }
 ];
 
 const newsBodies = {
@@ -10299,7 +10379,675 @@ const newsBodies = {
 
 スロアカ運営は今後も継続的に記事を追加・更新していきます。気になる機種や知りたいテーマがあれば、お気軽にリクエストしてください。
 
-賢く学んで、楽しいパチスロライフを送りましょう。`
+賢く学んで、楽しいパチスロライフを送りましょう。`,
+
+'news-juggler-history': `## 【特集】ジャグラー攻略の歴史
+
+1996年に初代ジャグラーが登場してから、約30年。GOGO!ランプの光が照らし続けてきたパチスロの王道シリーズの歴史を振り返ります。
+
+## 初代ジャグラー誕生(1996年・4号機)
+
+### 「完全告知」という発明
+1996年、北電子から登場した初代ジャグラーは、当時の常識を覆す機種でした:
+
+- **完全告知**: ボーナス成立時にGOGO!ランプが光るだけ
+- **目押し不要**: ボーナス絵柄を狙うだけで成立
+- **リーチ目を覚える必要なし**
+
+それまでの「リーチ目を読む」「目押しを極める」というパチスロの王道とは正反対の、シンプルさを追求した「異端の存在」でした。
+
+### 4号機時代の苦戦と逆転
+登場当初は地味なゲーム性のため苦戦しましたが、4号機終盤になると変化が起こります:
+
+- 連チャン機やストック機が規制で消えていった
+- 機械割の低さから敬遠していた若年層も「打たざるを得ない」状況に
+- ホールでの扱いも昇格 → さらに稼働アップの好循環
+
+シンプルさを貫いた結果、ジャグラーはホールに「なくてはならない存在」へと成長しました。
+
+## 5号機ジャグラー黄金期(2007年〜2018年)
+
+### アイムジャグラーEXのヒット(2007年)
+5号機ジャグラーシリーズは2007年の「アイムジャグラーEX」から始まりました:
+
+- 5号機への移行で機械割は低下
+- しかし「変わらないゲーム性」がファンの安心感に
+- ホール導入数No.1の主力機種に成長
+
+### 3系統の確立
+5号機時代に3つの主要シリーズが確立:
+
+| シリーズ | 特徴 |
+|---|---|
+| アイムジャグラー | オーソドックス・BIG獲得325枚 |
+| マイジャグラー | 高機械割・GOGO!ランプ中央配置 |
+| ゴーゴージャグラー | 後告知のみ・豆電球GOGO! |
+
+加えて、ハッピージャグラー・ファンキージャグラー・ミラクルジャグラー・みんなのジャグラー等の派生系統も登場。
+
+### マイジャグラーの台頭
+5号機時代の終盤には、マイジャグラーシリーズがアイムジャグラーを凌ぐ人気No.1の座に。中央配置のGOGO!ランプを「自分だけで楽しめる」スタイルが受け入れられました。
+
+## 6号機ジャグラー(2018年〜現在)
+
+### 新規格の登場
+6号機規則の関係で、5号機より仕様が変化:
+
+- BIG獲得枚数: 約325枚 → 約240枚に減少
+- ボーナス確率の向上で相殺
+- メダル持ちが向上(コイン単価低下)
+
+### 6号機の主要機種
+現在ホールで稼働している主な6号機ジャグラー:
+
+- <span class="news-link" onclick="jumpToArticle('settei-myJugV')">マイジャグラー5(2021年12月)</span>
+- <span class="news-link" onclick="jumpToArticle('settei-iJugEX')">アイムジャグラーEX(2020年12月)</span>
+- <span class="news-link" onclick="jumpToArticle('settei-neoIJugEX')">ネオアイムジャグラーEX(2025年9月)</span>
+- <span class="news-link" onclick="jumpToArticle('settei-happyV3')">ハッピージャグラーVIII(2022年10月)</span>
+- <span class="news-link" onclick="jumpToArticle('settei-funky2')">ファンキージャグラー2(2021年10月)</span>
+- <span class="news-link" onclick="jumpToArticle('settei-gogo3')">ゴーゴージャグラー3(2023年7月)</span>
+
+### 新シリーズの登場
+- ジャグラーガールズSS(2024年4月)
+- ミスタージャグラー(2024年7月)
+- ウルトラミラクルジャグラー(2024年12月)
+
+シリーズは40機種以上に拡大し、なお進化を続けています。
+
+## ジャグラー立ち回りの基本(変わらない4つのポイント)
+
+時代を超えて変わらないジャグラーの基本立ち回り:
+
+### 1. ホール選び
+- ジャグラーに高設定が入るホールを見極める
+- 朝イチで人が殺到する=高設定が入っている可能性大
+- 小役カウントしている上級者が多いホールも狙い目
+
+### 2. 設定推測の基礎
+- BIG確率: 設定差小
+- **REG確率: 設定差大(最重要)**
+- ぶどう確率: 機種により設定差大
+- 合算確率(BIG+REG): 全体の設定推測の基準
+
+### 3. 据え置き狙いと設定上げ狙い
+- 据え置き派ホール: 前日の高設定挙動台を狙う
+- 設定上げ派ホール: 前日凹み台の上げ狙い
+- ガックンチェックで判別可能(対策されてない店なら)
+
+### 4. ペカり待ち禁止
+- 「跳ね返り狙い」「ハマり狙い」は迷信
+- 0回転と200回転に有意な差はなし
+- 設定差を狙うのが唯一の正解
+
+## ジャグラーの進化(規格による変化)
+
+### 4号機 → 5号機 (2007)
+- 機械割低下も「変わらないゲーム性」で対応
+- ボーナス確率向上で出玉感は維持
+
+### 5号機 → 6号機 (2018)
+- BIG獲得枚数減少
+- ボーナス確率さらに向上
+- コイン持ちが大幅改善
+
+### 6号機 → 6.5号機 (2022)
+- 規制緩和で機械割上限が向上
+- 新機種の機械割が上向き
+- スマスロ機が無いシリーズとして安定継続
+
+## ジャグラーが愛され続ける理由
+
+### 1. シンプルさの究極
+- 完全告知で迷いなく打てる
+- リーチ目を覚える必要なし
+- 初心者でも上級者でも楽しめる
+
+### 2. 設定狙いに最適
+- 機械割が高設定で107〜109%程度と高め
+- 設定差のある要素が分かりやすい
+- 終日打って利益を取りやすい
+
+### 3. ホールでの扱いの良さ
+- 設定が入りやすい(高設定の使われ率が高い)
+- 競合店との差別化のため設定が必要
+- AT機より出玉のブレが少なく管理しやすい
+
+### 4. 文化としての定着
+- GOGO!ランプ=ジャグラーの代名詞
+- 30年以上愛され続けるロングセラー
+- 世代を超えて打ち継がれる名機
+
+## まとめ
+
+1996年の初代から現在まで、約30年にわたって愛され続けるジャグラー。シンプルなゲーム性を貫きつつ、規制に応じて進化を続けてきました。
+
+ジャグラーは「設定狙いの基本中の基本」を学ぶのに最適な機種です。スロアカでは6機種(マイジャグラー5・アイムジャグラーEX・ネオアイムジャグラーEX・ハッピージャグラーVIII・ファンキージャグラー2・ゴーゴージャグラー3)それぞれに設定推測ガイドを用意しています。
+
+GOGO!ランプの光に魅せられたら、まずはお気に入りの1機種を見つけて深く打ち込むのが上達の近道。ジャグラーで設定推測の基本を掴めば、他のAT機の立ち回りにも応用が効きます。
+
+詳細は教科書の<span class="news-link" onclick="jumpToArticle('jaguar-comparison')">ジャグラー比較ガイド</span>もご活用ください。`,
+
+'news-complete-rank': `## 【特集】完走機種ランキング考察
+
+スマスロのコンプリート機能(1日19000枚で稼働停止)に到達しやすい機種を、一撃性能・継続性・ループ機構の3軸で考察します。
+
+## 完走の基本仕様(おさらい)
+
+完走 = 1日MY19000枚到達で打ち止め:
+- MY = 最ハマリ点からの払い出し
+- 設定変更で解除
+- 完走台 = 翌日朝一の狙い目候補
+
+詳細は<span class="news-link" onclick="jumpToArticle('news-complete')">特集記事「コンプリート機能の仕組み」</span>を参照ください。
+
+## 完走しやすさの3軸
+
+### 軸1: 一撃性能
+- 1セットあたりの平均獲得枚数
+- 上乗せの最大値
+- AT当選1回でどこまで伸びるか
+
+### 軸2: 継続性
+- セット継続率(80%超が継続性高)
+- ストック機構の有無
+- 上位ATへの昇格機能
+
+### 軸3: ループ機構
+- 高確率ループ(モードB・天国B等)
+- スルー回数による救済
+- 引き戻しゾーンの厚さ
+
+## 完走実績で評価される機種
+
+### 北斗の拳系: <span class="news-link" onclick="jumpToArticle('hokuto')">スマスロ北斗の拳</span>
+
+**3軸評価**: 一撃◎・継続◎・ループ○
+
+- **無想転生バトル**による継続率優遇(70%超ループ)
+- 北斗揃い濃厚時の連チャン性能
+- 800Gハマり救済(800G到達でREG除く)が継続性に貢献
+
+完走報告も多く、北斗ファンにとって**伝統的な完走機種**として認知されています。
+
+### 革命機系: <span class="news-link" onclick="jumpToArticle('vvv2')">Lパチスロ革命機ヴァルヴレイヴ2</span>
+
+**3軸評価**: 一撃◎◎・継続○・ループ○
+
+- 純増約9枚クラス(現行最高水準の出玉性能)
+- 超革命RUSHの一撃性能
+- マリエモード・特殊テーブルの優遇
+- ハラキリチャレンジの有利区間切断恩恵
+
+純増の高さで完走への到達速度が早い。**「短時間完走」のチャンスがある機種**。
+
+### からくりサーカス: <span class="news-link" onclick="jumpToArticle('karakuri')">スマスロからくりサーカス</span>
+
+**3軸評価**: 一撃○・継続◎・ループ◎◎
+
+- 超からくりサーカスの一撃性能
+- 上位AT後40%天国の優遇
+- モード5回先抽選+CZスルー天井の救済機能
+- AT間2500G天井の激情ジャッジ
+
+ループ機構が豊富で、**じわじわ伸びる**タイプの完走機種。
+
+### 炎炎系: <span class="news-link" onclick="jumpToArticle('enen2')">L炎炎ノ消防隊2</span>
+
+**3軸評価**: 一撃○・継続○・ループ◎◎
+
+- 炎炎ループ天井(2000G+α)の救済
+- 伝導者の罠5回スルーでスペシャルエピソード確定
+- アドラバースト後5G引き戻し約68%
+- 5モード制(モードEは88G短縮)
+
+シリーズ初代で完走報告多数。**ループ性能で勝負**するタイプ。
+
+### 東京喰種: <span class="news-link" onclick="jumpToArticle('tokyoghoul')">L東京喰種</span>
+
+**3軸評価**: 一撃◎・継続◎・ループ○
+
+- 極BITES(上位AT)の一撃性能
+- 喰ポイント蓄積による爆発力
+- 赫眼系演出の超高期待度
+- モード転落なし(天国除く)
+
+**爆発力で押し切る**タイプの完走機種。
+
+### 沖ドキDUOアンコール: <span class="news-link" onclick="jumpToArticle('okidoki')">スマスロ沖ドキDUOアンコール</span>
+
+**3軸評価**: 一撃○・継続◎◎・ループ◎◎
+
+- 32G以内連チャン+DUOモード80%ループ
+- スルー10回天井で天国保障
+- 私バージョンアップ!~Unplugged ver.~でDUOモード80%ループ濃厚
+- 仮天井モード(301〜400G)の特殊救済
+
+**沖ドキ特有の連チャン性能**で完走に到達。波が荒く、ハマる時はとことんハマるが、ハマっただけ出玉も大きい。
+
+## 完走しやすさランキング(空による主観考察)
+
+### Sランク(完走報告非常に多い)
+- スマスロ北斗の拳
+- スマスロからくりサーカス
+
+### Aランク(完走チャンスあり)
+- Lパチスロ革命機ヴァルヴレイヴ2
+- L炎炎ノ消防隊2
+- L東京喰種
+- スマスロ沖ドキDUOアンコール
+
+### Bランク(完走報告少ない)
+- スマスロモンキーターンV(継続率優遇あるも一撃性能控えめ)
+- スマスロ吉宗ライジング(天国B 71.1%ループはあるが完走には届きにくい)
+- スマスロ甲鉄城のカバネリ(前作)
+- L鏡
+
+## 完走を狙うかどうかの判断
+
+### 完走を狙うべき場合
+- 高設定確信(設定6なら継続率優遇で完走チャンス)
+- 朝一から打てる(時間的余裕)
+- 投資余力がある(ハマり時に対応)
+
+### 完走を狙わない方が良い場合
+- 低設定確信(完走は奇跡レベル)
+- 短時間しか打てない(完走は終日勝負)
+- 投資余力がない(無理は禁物)
+
+## 完走台の朝一狙い
+
+完走台 = 設定変更の可能性が高い:
+
+### 設定変更狙いの理由
+- 完走後は店側が設定を変更しがち
+- 完走台周辺も設定アップの可能性
+- 朝一の狙い目として有効
+
+### 注意点
+- 必ずしも設定変更されるとは限らない
+- 据え置きの可能性も残る
+- ホールの傾向(完走後の対応)を把握すること
+
+## 完走しやすい時間帯
+
+### 朝一から夕方
+- 投資が嵩む時期
+- 完走への道のりは長い
+- 高設定でじわじわ積み上げ
+
+### 夕方から夜
+- 残り時間少ない
+- 一撃性能で勝負
+- 革命機系・東京喰種などが有利
+
+## 完走の現実的な確率
+
+設定6を打って完走する確率は機種によって違いますが、概ね数%〜10%程度。**毎日完走するわけではない**ことを理解しておきましょう。
+
+完走を目標にするのではなく、設定狙いの結果として完走することがある、という捉え方が健全です。
+
+## まとめ
+
+完走機種ランキングは:
+
+| ランク | 機種 |
+|---|---|
+| Sランク | 北斗の拳・からくりサーカス |
+| Aランク | ヴヴヴ2・炎炎2・東京喰種・沖ドキDUOアンコール |
+| Bランク | モンキー・吉宗・カバネリ・鏡 |
+
+完走を狙うなら**Sランク機種で設定6狙い**が王道。Aランクは一撃性能で短時間完走を狙う立ち回り。
+
+ただし完走は最終目標ではなく、**設定狙いの過程で生まれる結果**として捉えることが重要です。日々の立ち回りを丁寧に積み上げて、完走のチャンスがあれば全力で取りに行きましょう。`,
+
+'news-hall-selection': `## 【特集】ホール選びの極意
+
+立ち回りの土台となる「ホール選び」について、設定が入る店の見抜き方・癖読み・客層チェックの実践知識を5つの観点で解説します。
+
+## ホール選びがなぜ重要か
+
+立ち回りの順序を再確認:
+
+1. **ホール選び** ← 最重要
+2. 機種選び
+3. 台選び
+4. 立ち回り(打ち方・ヤメ時)
+
+ホール選びを間違えると、その後の機種選びも台選びも台無しになります。「設定が入っていないホールで設定狙いをする」のは時間の無駄。**まずホール選びが第一**です。
+
+## 観点1: 設定が入る店の見抜き方
+
+### 1-1. 朝イチの稼働状況
+- **入場待ちの行列**: 高設定狙いの常連が集まる証拠
+- **抽選参加者数**: 100人超なら設定への期待値が立っている
+- **誰もいない**: 設定が入らないor設定狙いに値しないホール
+
+### 1-2. 上級者の存在
+- **小役カウンターを使う人**: 設定推測する価値があると判断
+- **ベテラン風の常連**: 設定6を握ったことがあるサイン
+- **若い層が多い**: 専業・セミプロが集まるホール
+
+### 1-3. 全体の出玉
+- **当日のドル箱の数**: 出玉が出ているなら設定が入っている
+- **完走台の有無**: コンプリート完走台があれば設定6が入っている可能性
+- **設定推測サイトの該当ホール評価**: 信頼度の高いソースで補強
+
+### 1-4. 導入機種のラインナップ
+- **新台導入が早い**: 集客に積極的なホール
+- **メイン機種が多様**: 設定の選択肢が広い
+- **古い機種が中心**: 設定よりイベント目的のホール
+
+## 観点2: ホールの「癖」を読む
+
+### 2-1. 設定の入れ方のパターン
+
+#### 角台優遇型
+- 各シマの角台に高設定を入れる傾向
+- 視認性が高く客寄せ効果
+- 角台優遇のホールは判別しやすい
+
+#### 散らし型
+- シマ全体に分散させる
+- 角や中央に偏らない
+- 隣の台がアタリでも自分の台はハズレの可能性
+
+#### 固め打ち型
+- 連続した2〜3台に高設定
+- 隣がアタリなら自分もアタリの可能性
+- 何台固めるかを把握すると効率UP
+
+#### 同じ台番優遇型
+- 旧イベント日に毎回同じ台に高設定
+- 癖が分かれば狙い撃ち可能
+- 数日のデータで判別可能
+
+#### 違う台番にバラす型
+- 毎回違う台に入れる
+- 前回の高設定台は今回は外れの可能性
+- 消去法で絞り込める
+
+### 2-2. 設定変更/据え置きの傾向
+- **据え置き派ホール**: 前日の挙動を引き継ぐ
+- **設定変更派ホール**: 毎日リセット中心
+- **ハイブリッド型**: 一部据え置き・一部変更
+
+#### 判別方法
+- ガックンチェック(対策していないホール限定)
+- 朝一の挙動観察
+- データの連続性
+
+## 観点3: 客層チェック
+
+### 3-1. 良い客層の特徴
+- **小役カウンターを使う上級者が多い**
+- **目押しがしっかりできる人が多い**
+- **常連同士の情報交換がある**
+- **若い層〜中年層が中心**
+
+### 3-2. 注意すべき客層
+- **小役カウンターを使う人がいない**
+- **目押しが雑な人ばかり**
+- **高齢層が多い**: 設定狙い文化が薄い場合あり
+- **熱気が薄い**: 設定が入らない店の典型
+
+### 3-3. 客層から判断するホールの方針
+- 上級者が集まる = 設定狙いに価値があるホール
+- 高齢層中心 = 遊技目的の客層がメイン
+- 一般層中心 = イベント日のみ高設定の可能性
+
+## 観点4: 据え置き派/設定変更派の判別
+
+### 4-1. 据え置き派ホールの見抜き方
+- **前日のデータがそのまま続いている**(連日合算同じ等)
+- **ガックンしない台が多い**
+- **連続して凹みor爆発が続く台がある**
+- **店長が「うちは据え置き派」と言うこともある**
+
+### 4-2. 設定変更派ホールの見抜き方
+- **毎日のスランプグラフがリセットされている**
+- **ガックンする台が多い**
+- **前日と当日の合算が大きく違う**
+- **前日凹み台が翌日爆発のパターンが多い**
+
+### 4-3. 立ち回りの違い
+
+#### 据え置き派ホールでの戦略
+- **前日高設定挙動台の据え置き狙い**
+- **前日凹み台はノータッチ**
+- データを引き継いで打つ
+- 朝一から打ち始めて1日で結果を出す
+
+#### 設定変更派ホールでの戦略
+- **前日凹み台の設定上げ狙い**
+- **前日高設定挙動台は無視**
+- ガックン期待で打つ
+- 1G目のレア役挙動を観察
+
+## 観点5: イベントの活用
+
+### 5-1. 旧イベント日(特定日)の活用
+- **5の付く日**: 多くのホールで設定アップ
+- **7の付く日**: 一部ホールでメイン日
+- **月初・月末**: 月単位の調整日
+- **創業祭・周年祭**: 大型イベント
+
+### 5-2. SNS情報の活用
+- **公約付きホール情報**: スロパチ系の公約サイト
+- **常連の口コミ**: Twitter等での情報
+- **ホール公式SNS**: 店からの直接情報
+
+### 5-3. 公約の信頼度判断
+- **A級ホール**: 公約をほぼ守る
+- **B級ホール**: 半分守る・半分は外れ
+- **C級ホール**: 公約はパフォーマンス
+- **過去のデータでの実績判断が最重要**
+
+## ホール選びの実践フロー
+
+### ステップ1: 候補ホールのリスト化
+- 自宅周辺のホールを5〜10店リストアップ
+- アプリ(DMMぱちタウン等)で稼働データチェック
+- 各ホールの基本情報を把握
+
+### ステップ2: 数日のデータ収集
+- 各ホールに数日通って傾向観察
+- スランプグラフ・台ごとの挙動記録
+- 客層・上級者の有無確認
+
+### ステップ3: 主力ホール2〜3店に絞り込む
+- データで設定が入っていると判断できるホール
+- 自分の立ち回りスタイルに合うホール
+- 通いやすい立地のホール
+
+### ステップ4: 主力ホール内での癖読み
+- 設定の入れ方のパターン分析
+- 据え置き/変更の傾向把握
+- イベント日のリスト作成
+
+### ステップ5: 立ち回りに反映
+- 主力ホールでの設定狙い
+- 副次ホールでハイエナ
+- 状況に応じて柔軟に対応
+
+## 避けるべきホールの特徴
+
+### 1. 設定が入らないホール
+- 連日凹み台ばかり
+- 上級者が誰もいない
+- イベント日も期待値プラスにならない
+
+### 2. 客層が悪いホール
+- マナー違反が多い
+- 台移動の取り合いが激しい
+- 専業・セミプロのトラブルが多い
+
+### 3. 利益優先すぎるホール
+- 全台設定1〜2基本
+- イベントでも甘くない
+- 公約を完全無視
+
+### 4. 設備・サービスが悪い
+- データ管理が甘い
+- 機械の故障多い
+- スタッフの対応が悪い
+
+## ホール選びの倫理面
+
+### 1. ホールルールの遵守
+- ホッパー満タンになったら呼び出す
+- 台移動のルールに従う
+- 過度な貼り付き禁止のルールを守る
+
+### 2. 他のお客様への配慮
+- 隣の台の人に圧迫感を与えない
+- 大声で話さない
+- マナー良く打つ
+
+### 3. ホールとの関係性
+- ホールは商売
+- お互いに利益を取る関係
+- 過度な批判はNG
+
+## まとめ
+
+ホール選びは立ち回りの土台。以下の5つの観点で総合判断:
+
+1. **設定が入る店の見抜き方**: 朝イチ稼働・上級者の有無・出玉
+2. **ホールの癖読み**: 角台優遇・散らし型・固め打ち型
+3. **客層チェック**: 小役カウンター使用率・年齢層
+4. **据え置き派/設定変更派の判別**: 戦略を切り替える
+5. **イベントの活用**: 旧イベント日・公約の信頼度
+
+立ち回りに迷ったら、まず**ホール選び**から見直しましょう。良いホールに通うだけで、収支が劇的に改善することも珍しくありません。
+
+教科書の<span class="news-link" onclick="jumpToArticle('news-settei-vs-hyena')">設定狙いとハイエナの違い</span>と組み合わせて、自分のスタイルに合った立ち回りを構築してください。`,
+
+'news-feature-release': `## 校内新聞機能リリースのお知らせ
+
+スロアカに新機能「**校内新聞**」が追加されました。
+
+## 校内新聞とは
+
+スロットアカデミーの新しいコンテンツ配信機能です:
+- **業界の最新動向**を速報として配信
+- **特集記事**で深掘り知識を提供
+- **運営からのお知らせ**を一元化
+
+## 主な機能
+
+### 1. 3つのカテゴリ
+
+#### 🔴 速報
+業界の最新動向・直近の機種情報・規制変更等を配信。日付の新しい順に表示されます。
+
+#### 📖 特集
+業界の歴史・規制解説・立ち回りテクニック等の深掘り記事。教科書(知識ベース)を補完する位置付け。
+
+#### 📢 お知らせ
+スロアカ運営からの情報・新機能の案内・記事追加報告。
+
+### 2. 検索・フィルター
+- カテゴリ別フィルター
+- タイトル・概要の検索ボックス
+- 日付降順ソート
+
+### 3. 教科書との連携(本機能の核)
+ニュース記事内で機種名や用語に**内部リンク**を設置。タップで対応する教科書記事へジャンプできます:
+
+- 機種名 → 設定推測ガイド・天井狙い・ヤメ時詳細・ゾーン狙い
+- 用語 → 単語帳の該当項目
+- 関連記事 → 別のニュース記事
+
+## 初期コンテンツ(16記事)
+
+### 🔴 速報(5件)
+- <span class="news-link" onclick="jumpToArticle('news-2026-04-trends')">2026年4月最新スマスロ動向</span>
+- <span class="news-link" onclick="jumpToArticle('news-popular-rank')">現行スマスロ人気機種ランキング考察</span>
+- <span class="news-link" onclick="jumpToArticle('news-recent-debut')">直近の注目導入機種紹介</span>
+- <span class="news-link" onclick="jumpToArticle('news-regulation')">規制関連の最新動向</span>
+- <span class="news-link" onclick="jumpToArticle('news-hyena-env')">ハイエナ環境の最新事情</span>
+
+### 📖 特集(7件)
+- <span class="news-link" onclick="jumpToArticle('news-history-regulation')">スマスロ規制の歴史</span>
+- <span class="news-link" onclick="jumpToArticle('news-65gou')">6.5号機とは何か</span>
+- <span class="news-link" onclick="jumpToArticle('news-complete')">コンプリート機能の仕組み</span>
+- <span class="news-link" onclick="jumpToArticle('news-settei-vs-hyena')">設定狙いとハイエナの違い</span>
+- <span class="news-link" onclick="jumpToArticle('news-beginner-guide')">学生のためのパチスロ攻略入門</span>
+- <span class="news-link" onclick="jumpToArticle('news-juggler-history')">ジャグラー攻略の歴史</span>
+- <span class="news-link" onclick="jumpToArticle('news-complete-rank')">完走機種ランキング考察</span>
+- <span class="news-link" onclick="jumpToArticle('news-hall-selection')">ホール選びの極意</span>
+
+### 📢 お知らせ(3件)
+- <span class="news-link" onclick="jumpToArticle('news-welcome')">スロアカへようこそ</span>
+- <span class="news-link" onclick="jumpToArticle('news-textbook-54')">教科書54記事完成のお知らせ</span>
+- 校内新聞機能リリースのお知らせ(本記事)
+
+## ご利用方法
+
+### アクセス方法
+1. トップナビの「**校内新聞**」タブをタップ
+2. カテゴリフィルターで絞り込み(任意)
+3. 検索ボックスで記事検索(任意)
+4. 記事カードをタップして詳細を読む
+
+### 教科書記事へのジャンプ
+記事内の**青い文字+矢印「→」**または**チップ(📖の隣の小さなボタン)**をタップすると、対応する教科書記事へ移動します。
+
+戻る場合は教科書側の「← 戻る」または下部のタブから「校内新聞」を選択してください。
+
+## 今後の予定
+
+### 短期(1〜2ヶ月以内)
+- 速報記事の継続更新
+- 新機種導入時の臨時特集
+- ユーザーからのリクエスト対応
+
+### 中期(3〜6ヶ月以内)
+- 関連記事サジェスト機能
+- ブックマーク機能
+- 記事の評価機能
+
+### 長期(6ヶ月以降)
+- AI記事生成連携(フェーズ5)
+- ユーザー投稿機能(フェーズ6)
+- リアルタイム更新
+
+## ご利用上の注意
+
+### 1. 速報の鮮度について
+速報記事は配信時点の情報で書かれていますが、以下の点にご注意ください:
+- ホール環境は日々変化します
+- 規制は予告なく変更されることがあります
+- 機種スペックの解釈は更新される場合あります
+- 信頼できる情報源で必ず最終確認を
+
+### 2. 投資判断は自己責任で
+記事の内容は参考情報です。実際の遊技は自己責任でお願いします。
+
+### 3. 著作権について
+- 記事の引用元は明記しています
+- 個人的な参考利用以外の二次利用はご遠慮ください
+
+## フィードバックのお願い
+
+校内新聞は継続的に改善していきます。以下のような声をお待ちしています:
+- 取り上げてほしいトピック
+- 詳しく知りたい機種
+- 記事の誤りや古い情報の指摘
+- 新機能のリクエスト
+
+スロアカ運営は皆様のご意見を大切にします。今後ともスロアカをよろしくお願いいたします。
+
+## まとめ
+
+校内新聞機能で、スロアカは:
+- **計算実習室**(計算機)
+- **図書館**(知識ベース・54記事)
+- **校内新聞**(業界ニュース・16記事)
+
+の3本柱を持つコンテンツプラットフォームに進化しました。
+
+階級別の学習システムに加えて、業界の最新動向もキャッチアップできる総合学習サービスです。ぜひ各機能を活用して、賢く楽しいパチスロライフを送ってください。`
 };
 
 let newsCat = 'all', newsSearchStr = '';
@@ -10310,18 +11058,18 @@ function newsSetCat(c) {
   newsRender();
 }
 function newsSearch() {
-  newsSearchStr = (document.getElementById('newsSearchBox').value || '').trim().toLowerCase();
-  newsRender();
+  if (_newsSearchTimer) clearTimeout(_newsSearchTimer);
+  _newsSearchTimer = setTimeout(() => {
+    newsSearchStr = (document.getElementById('newsSearchBox').value || '').trim();
+    newsRender();
+  }, 150);
 }
 function newsRender() {
   const c = document.getElementById('newsListContainer');
   let items = newsArticles.slice();
   if (newsCat !== 'all') items = items.filter(a => a.cat === newsCat);
   if (newsSearchStr) {
-    items = items.filter(a =>
-      a.title.toLowerCase().includes(newsSearchStr) ||
-      a.summary.toLowerCase().includes(newsSearchStr)
-    );
+    items = items.filter(a => matchesQuery(a.title + ' ' + a.summary, newsSearchStr));
   }
   // 日付降順ソート
   items.sort((a, b) => b.date.localeCompare(a.date));
@@ -10331,16 +11079,21 @@ function newsRender() {
   }
   const catLabels = { breaking: '🔴 速報', feature: '📖 特集', notice: '📢 お知らせ' };
   const catColors = { breaking: '#d32f2f', feature: '#5d4037', notice: '#1976d2' };
-  c.innerHTML = items.map(a => `
-    <div onclick="newsShow('${a.id}')" style="padding: 14px; margin-bottom: 12px; background: var(--c-bg-secondary); border: 0.5px solid var(--c-border-tertiary); border-radius: 10px; cursor: pointer; transition: background 0.15s;">
+  c.innerHTML = items.map(a => {
+    const isNewBadge = isNewsNew(a.date) ? '<span class="news-badge-new">NEW</span>' : '';
+    const readClass = isRead('news', a.id) ? ' read-item' : '';
+    return `
+    <div class="article-card${readClass}" onclick="newsShow('${a.id}')">
+      ${isNewBadge}
       <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 6px; font-size: 11px;">
         <span style="background: ${catColors[a.cat]}; color: white; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.05em;">${catLabels[a.cat]}</span>
         <span style="color: var(--c-text-tertiary);">${a.date}</span>
       </div>
-      <h3 style="margin: 0 0 6px; font-size: 15px; line-height: 1.4; color: var(--c-text-primary);">${a.title}</h3>
-      <p style="margin: 0; font-size: 12px; line-height: 1.5; color: var(--c-text-secondary);">${a.summary}</p>
+      <p class="article-card-title">${a.title}</p>
+      <p class="article-card-summary">${a.summary}</p>
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 function newsShow(id) {
   const a = newsArticles.find(x => x.id === id);
@@ -10350,20 +11103,122 @@ function newsShow(id) {
   const body = newsBodies[id] || '記事が見つかりません';
   const catLabels = { breaking: '🔴 速報', feature: '📖 特集', notice: '📢 お知らせ' };
   const catColors = { breaking: '#d32f2f', feature: '#5d4037', notice: '#1976d2' };
+  // 関連記事
+  const related = getRelatedNews(id, 3);
+  let relatedHtml = '';
+  if (related.length > 0) {
+    relatedHtml = '<div class="related-articles"><p class="related-articles-label">📰 関連する校内新聞</p>' +
+      related.map(r => '<div class="related-article-link" onclick="newsShow(\'' + r.id + '\')">' + r.title + '<span class="related-article-link-meta">→</span></div>').join('') +
+      '</div>';
+  }
+  const readBtn = '<button class="read-toggle-btn" onclick="toggleReadStatus(\'news\', \'' + id + '\', \'newsShow\')">' + (isRead('news', id) ? '✓ 既読(タップで未読へ)' : '◯ 未読(タップで既読へ)') + '</button>';
   document.getElementById('newsDetailContent').innerHTML = `
     <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px; font-size: 11px;">
       <span style="background: ${catColors[a.cat]}; color: white; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.05em;">${catLabels[a.cat]}</span>
       <span style="color: var(--c-text-tertiary);">${a.date}</span>
     </div>
-    <h2 style="margin: 0 0 16px; font-size: 18px; line-height: 1.4;">${a.title}</h2>
+    <h2 style="margin: 0 0 12px; font-size: 18px; line-height: 1.4;">${a.title}</h2>
+    ${readBtn}
     <div class="kb-article-body">${md2html(body)}</div>
+    ${relatedHtml}
   `;
   window.scrollTo(0, 0);
 }
 function newsBackToList() {
   document.getElementById('news-detailView').style.display = 'none';
   document.getElementById('news-listView').style.display = 'block';
+  newsRender();  // 既読マーク反映
   window.scrollTo(0, 0);
+}
+
+/* ===== 共通ユーティリティ(品質向上版) ===== */
+// 既読管理(localStorage)
+function getReadIds(kind) {
+  // kind: 'term' | 'article' | 'news'
+  try {
+    return JSON.parse(localStorage.getItem('slotaca_read_' + kind) || '[]');
+  } catch (e) { return []; }
+}
+function markAsRead(kind, id) {
+  try {
+    const arr = getReadIds(kind);
+    if (!arr.includes(id)) {
+      arr.push(id);
+      localStorage.setItem('slotaca_read_' + kind, JSON.stringify(arr));
+    }
+  } catch (e) { /* ignore */ }
+}
+function unmarkAsRead(kind, id) {
+  try {
+    const arr = getReadIds(kind).filter(x => x !== id);
+    localStorage.setItem('slotaca_read_' + kind, JSON.stringify(arr));
+  } catch (e) { /* ignore */ }
+}
+function isRead(kind, id) {
+  return getReadIds(kind).includes(id);
+}
+// 既読/未読トグル: 詳細画面のボタンから呼ぶ
+function toggleReadStatus(kind, id, refreshFnName) {
+  if (isRead(kind, id)) {
+    unmarkAsRead(kind, id);
+  } else {
+    markAsRead(kind, id);
+  }
+  // 詳細を再描画してボタン表示を更新
+  if (refreshFnName === 'kbShowTerm') kbShowTerm(id);
+  else if (refreshFnName === 'kbShowArticle') kbShowArticle(id);
+  else if (refreshFnName === 'newsShow') newsShow(id);
+}
+
+// 複数語AND検索: スペース/全角スペース区切り→全部含むか
+function matchesQuery(text, query) {
+  if (!query) return true;
+  const t = (text || '').toLowerCase();
+  const tokens = query.toLowerCase().split(/[\s 　]+/).filter(x => x);
+  return tokens.every(tok => t.includes(tok));
+}
+
+// 関連記事抽出(教科書)
+function getRelatedArticles(currentId, max) {
+  const cur = articles.find(a => a.id === currentId);
+  if (!cur) return [];
+  const others = articles.filter(a => a.id !== currentId);
+  // スコアリング: 同じ機種(+3) > 同じtype(+1)
+  const scored = others.map(a => {
+    let s = 0;
+    if (cur.type === 'machine' && a.type === 'machine' && cur.machines && a.machines) {
+      const overlap = cur.machines.filter(m => a.machines.includes(m)).length;
+      if (overlap > 0) s += 3 * overlap;
+    }
+    if (cur.type === a.type) s += 1;
+    return { a, s };
+  });
+  scored.sort((x, y) => y.s - x.s || Math.random() - 0.5);
+  return scored.slice(0, max || 3).map(x => x.a);
+}
+
+// 関連ニュース記事抽出
+function getRelatedNews(currentId, max) {
+  const cur = newsArticles.find(n => n.id === currentId);
+  if (!cur) return [];
+  const others = newsArticles.filter(n => n.id !== currentId);
+  // 同カテゴリ優先
+  const sameCat = others.filter(n => n.cat === cur.cat);
+  const otherCat = others.filter(n => n.cat !== cur.cat);
+  // 同カテゴリ内では日付降順
+  sameCat.sort((a, b) => b.date.localeCompare(a.date));
+  otherCat.sort((a, b) => b.date.localeCompare(a.date));
+  return [...sameCat, ...otherCat].slice(0, max || 3);
+}
+
+// 新着判定(校内新聞用): 直近7日以内
+function isNewsNew(dateStr) {
+  try {
+    const d = new Date(dateStr);
+    const now = new Date('2026-04-29');  // スロアカの基準日
+    const diff = (now - d) / (1000 * 60 * 60 * 24);
+    return diff >= 0 && diff <= 7;
+  } catch (e) { return false; }
 }
 
 let kbTab = 'glossary', kbCat = 'all', kbSearchStr = '';
@@ -10408,9 +11263,14 @@ function kbSetMachine(mid) {
   document.querySelectorAll('.cat-chip[data-machine]').forEach(x => x.classList.toggle('active', x.dataset.machine === mid));
   kbRender();
 }
+// 検索のdebounce(IME入力の負荷軽減)
+let _kbSearchTimer = null, _newsSearchTimer = null;
 function kbSearch() {
-  kbSearchStr = document.getElementById('searchBox').value.toLowerCase();
-  kbRender();
+  if (_kbSearchTimer) clearTimeout(_kbSearchTimer);
+  _kbSearchTimer = setTimeout(() => {
+    kbSearchStr = (document.getElementById('searchBox').value || '').trim();
+    kbRender();
+  }, 150);
 }
 function escapeHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 function inlineMd(t) { return escapeHtml(t).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>'); }
@@ -10435,31 +11295,35 @@ function kbRender() {
   const c = document.getElementById('listContainer');
   if (kbTab === 'glossary') {
     let f = terms;
-    if (kbCat !== 'all') f = f.filter(t => t.cat === kbCat);
-    if (kbSearchStr) f = f.filter(t => t.name.toLowerCase().includes(kbSearchStr) || t.def.toLowerCase().includes(kbSearchStr));
+    if (kbCat !== 'all' && !kbSearchStr) f = f.filter(t => t.cat === kbCat);
+    if (kbSearchStr) f = f.filter(t => matchesQuery(t.name + ' ' + t.def, kbSearchStr));
     if (f.length === 0) { c.innerHTML = '<div class="empty-state">該当する用語がありません</div>'; return; }
-    c.innerHTML = f.map(t => '<div class="term-row" onclick="kbShowTerm(\'' + t.id + '\')"><p class="term-name">' + t.name + '</p><p class="term-def">' + t.def + '</p></div>').join('');
+    c.innerHTML = f.map(t => '<div class="term-row' + (isRead('term', t.id) ? ' read-item' : '') + '" onclick="kbShowTerm(\'' + t.id + '\')"><p class="term-name">' + t.name + '</p><p class="term-def">' + t.def + '</p></div>').join('');
   } else {
     // 教科書(articles)
     let f = articles;
-    // サブタブによるフィルタ
-    if (kbBookCat === 'general') {
-      f = f.filter(a => a.type === 'general');
-    } else if (kbBookCat === 'machine') {
-      // 選択中の機種に関連する記事だけ表示
-      f = f.filter(a => a.type === 'machine' && a.machines && a.machines.indexOf(kbMachine) !== -1);
+    // 検索時は機種フィルター/サブタブフィルターを解除して全記事から検索
+    if (!kbSearchStr) {
+      if (kbBookCat === 'general') {
+        f = f.filter(a => a.type === 'general');
+      } else if (kbBookCat === 'machine') {
+        f = f.filter(a => a.type === 'machine' && a.machines && a.machines.indexOf(kbMachine) !== -1);
+      }
+    } else {
+      f = f.filter(a => matchesQuery(a.title + ' ' + a.summary + ' ' + (articleBodies[a.id] || ''), kbSearchStr));
     }
-    if (kbSearchStr) f = f.filter(a => a.title.toLowerCase().includes(kbSearchStr) || a.summary.toLowerCase().includes(kbSearchStr) || (articleBodies[a.id] && articleBodies[a.id].toLowerCase().includes(kbSearchStr)));
     if (f.length === 0) {
       let emptyMsg = '該当する記事がありません';
-      if (kbBookCat === 'machine' && kbMachine) {
+      if (kbBookCat === 'machine' && kbMachine && !kbSearchStr) {
         const mInfo = machineCatalog.find(m => m.id === kbMachine);
         if (mInfo) emptyMsg = mInfo.name + ' に関する記事はまだ準備中です';
       }
       c.innerHTML = '<div class="empty-state">' + emptyMsg + '</div>';
       return;
     }
-    c.innerHTML = '<div style="padding: 14px;">' + f.map(a => '<div class="article-card" onclick="kbShowArticle(\'' + a.id + '\')"><p class="article-card-title">' + a.title + '</p><p class="article-card-summary">' + a.summary + '</p><p class="article-card-meta">約' + (articleBodies[a.id] ? articleBodies[a.id].length : 0) + '字</p></div>').join('') + '</div>';
+    // 検索時は「全教科書から検索した結果」と分かるように案内表示
+    const searchNote = kbSearchStr ? '<p style="font-size: 11px; color: var(--c-text-tertiary); margin: 0 0 10px;">「' + escapeHtml(kbSearchStr) + '」の検索結果(' + f.length + '件・全教科書から)</p>' : '';
+    c.innerHTML = '<div style="padding: 14px;">' + searchNote + f.map(a => '<div class="article-card' + (isRead('article', a.id) ? ' read-item' : '') + '" onclick="kbShowArticle(\'' + a.id + '\')"><p class="article-card-title">' + a.title + '</p><p class="article-card-summary">' + a.summary + '</p><p class="article-card-meta">約' + (articleBodies[a.id] ? articleBodies[a.id].length : 0) + '字</p></div>').join('') + '</div>';
   }
 }
 function kbShowTerm(id) {
@@ -10468,18 +11332,30 @@ function kbShowTerm(id) {
   const r = terms.filter(x => x.cat === t.cat && x.id !== t.id).slice(0, 4);
   document.getElementById('kb-listView').style.display = 'none';
   document.getElementById('kb-detailView').style.display = 'block';
-  document.getElementById('detailContent').innerHTML = '<p style="font-size: 11px; color: var(--c-text-tertiary); margin: 0 0 4px;">' + cl + '</p><h2 class="detail-title">' + t.name + '</h2><div class="detail-body"><p>' + t.def + '</p></div><div class="related-terms"><p class="related-label">関連語句</p>' + r.map(x => '<span class="related-link" onclick="kbShowTerm(\'' + x.id + '\')">' + x.name + '</span>').join('') + '</div>';
+  const readBtn = '<button class="read-toggle-btn" onclick="toggleReadStatus(\'term\', \'' + id + '\', \'kbShowTerm\')">' + (isRead('term', id) ? '✓ 既読(タップで未読へ)' : '◯ 未読(タップで既読へ)') + '</button>';
+  document.getElementById('detailContent').innerHTML = '<p style="font-size: 11px; color: var(--c-text-tertiary); margin: 0 0 4px;">' + cl + '</p><h2 class="detail-title">' + t.name + '</h2>' + readBtn + '<div class="detail-body"><p>' + t.def + '</p></div><div class="related-terms"><p class="related-label">関連語句</p>' + r.map(x => '<span class="related-link" onclick="kbShowTerm(\'' + x.id + '\')">' + x.name + '</span>').join('') + '</div>';
 }
 function kbShowArticle(id) {
   const a = articles.find(x => x.id === id); if (!a) return;
   document.getElementById('kb-listView').style.display = 'none';
   document.getElementById('kb-detailView').style.display = 'block';
   const bh = articleBodies[id] ? md2html(articleBodies[id]) : '<p style="color: var(--c-text-tertiary);">本文未執筆</p>';
-  document.getElementById('detailContent').innerHTML = '<p style="font-size: 11px; color: var(--c-text-tertiary); margin: 0 0 4px;">教科書</p><h2 class="detail-title">' + a.title + '</h2><p style="font-size: 12px; color: var(--c-text-secondary); margin: 0 0 16px;">' + a.summary + '</p><div class="detail-body">' + bh + '</div>';
+  // 関連記事
+  const related = getRelatedArticles(id, 3);
+  let relatedHtml = '';
+  if (related.length > 0) {
+    relatedHtml = '<div class="related-articles"><p class="related-articles-label">📚 関連する教科書</p>' +
+      related.map(r => '<div class="related-article-link" onclick="kbShowArticle(\'' + r.id + '\')">' + r.title + '<span class="related-article-link-meta">→</span></div>').join('') +
+      '</div>';
+  }
+  const readBtn = '<button class="read-toggle-btn" onclick="toggleReadStatus(\'article\', \'' + id + '\', \'kbShowArticle\')">' + (isRead('article', id) ? '✓ 既読(タップで未読へ)' : '◯ 未読(タップで既読へ)') + '</button>';
+  document.getElementById('detailContent').innerHTML = '<p style="font-size: 11px; color: var(--c-text-tertiary); margin: 0 0 4px;">教科書</p><h2 class="detail-title">' + a.title + '</h2><p style="font-size: 12px; color: var(--c-text-secondary); margin: 0 0 12px;">' + a.summary + '</p>' + readBtn + '<div class="detail-body">' + bh + '</div>' + relatedHtml;
 }
 function kbBackToList() {
   document.getElementById('kb-detailView').style.display = 'none';
   document.getElementById('kb-listView').style.display = 'block';
+  // 既読マークの反映
+  kbRender();
 }
 
 // Initialize
