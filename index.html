@@ -886,6 +886,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+// ESCキーでモーダルを閉じる(階級選択済みの場合のみ)
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const overlay = document.getElementById('gradeOverlay');
+    if (overlay && overlay.classList.contains('show') && currentGrade) {
+      closeGradeSelector();
+    }
+  }
+});
 
 /* ===== App tabs ===== */
 function showPage(p) {
@@ -900,8 +909,27 @@ function showPage(p) {
   }
   window.scrollTo(0, 0);
 }
-function jumpToTerm(id) { showPage('knowledge'); kbSetTab('glossary'); setTimeout(() => kbShowTerm(id), 30); }
+function jumpToTerm(id) {
+  // ニュース詳細表示も閉じる
+  const ndv = document.getElementById('news-detailView');
+  const nlv = document.getElementById('news-listView');
+  if (ndv) ndv.style.display = 'none';
+  if (nlv) nlv.style.display = 'block';
+  showPage('knowledge');
+  kbSetTab('glossary');
+  setTimeout(() => kbShowTerm(id), 30);
+}
 function jumpToArticle(id) {
+  // ニュース詳細表示も閉じる(ニュース→教科書ジャンプ時)
+  const ndv = document.getElementById('news-detailView');
+  const nlv = document.getElementById('news-listView');
+  if (ndv) ndv.style.display = 'none';
+  if (nlv) nlv.style.display = 'block';
+  // 教科書詳細表示も初期状態に戻す
+  const kdv = document.getElementById('kb-detailView');
+  const klv = document.getElementById('kb-listView');
+  if (kdv) kdv.style.display = 'none';
+  if (klv) klv.style.display = 'block';
   showPage('knowledge');
   kbSetTab('articles');
   // 該当記事のtypeに応じてサブタブと機種を切り替え
@@ -912,6 +940,15 @@ function jumpToArticle(id) {
       kbSetBookCat('machine');
     } else {
       kbSetBookCat('general');
+    }
+  } else {
+    // articlesに見つからない場合(news-XXX系のリンク等)はnewsとして扱う
+    const n = newsArticles.find(x => x.id === id);
+    if (n) {
+      // ニュース記事へのジャンプ
+      showPage('news');
+      setTimeout(() => newsShow(id), 30);
+      return;
     }
   }
   setTimeout(() => kbShowArticle(id), 30);
